@@ -3,7 +3,7 @@ import App from '@app/index';
 import { render, fireEvent } from './utils/test-utils';
 
 describe('App tests', () => {
-  it('should render a nav-toggle button', () => {
+  it.only('should render a nav-toggle button', () => {
     const { container } = render(<App />);
     const button = container.querySelector('#nav-toggle');
     expect(button).toBeInTheDocument();
@@ -19,7 +19,6 @@ describe('App tests', () => {
   it('should expand the sidebar on larger viewports', () => {
     Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 1200 });
     const { container } = render(<App />);
-    console.log(window.innerWidth);
     fireEvent.resize(window);
     expect(container.querySelector('#page-sidebar').classList.contains('pf-m-expanded')).toBeTruthy();
   });
