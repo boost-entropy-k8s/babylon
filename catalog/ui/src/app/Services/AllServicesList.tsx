@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { useEffect, useReducer, useRef, useState } from 'react';
+import { useEffect, useReducer, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import { Link, Redirect, useHistory, useLocation } from 'react-router-dom';
 
@@ -45,19 +45,16 @@ import LocalTimestamp from '@app/components/LocalTimestamp';
 import OpenshiftConsoleLink from '@app/components/OpenshiftConsoleLink';
 import SelectableTable from '@app/components/SelectableTable';
 import TimeInterval from '@app/components/TimeInterval';
-
-import { K8sFetchState, cancelFetchActivity, k8sFetchStateReducer } from '@app/K8sFetchState';
-
+import { cancelFetchActivity, k8sFetchStateReducer } from '@app/K8sFetchState';
 import { checkResourceClaimCanStart, checkResourceClaimCanStop, displayName, BABYLON_DOMAIN } from '@app/util';
-
 import ServiceActions from './ServiceActions';
 import ServiceNamespaceSelect from './ServiceNamespaceSelect';
 import ServiceStatus from './ServiceStatus';
 import ServicesAction from './ServicesAction';
 import ServicesScheduleAction from './ServicesScheduleAction';
+import Modal, { useModal } from '@app/Modal/Modal';
 
 import './all-services-list.css';
-import Modal from '@app/Modal';
 
 const FETCH_BATCH_LIMIT = 30;
 
@@ -150,8 +147,8 @@ const AllServicesList: React.FunctionComponent<ServicesListProps> = ({ serviceNa
   const [resourceClaimsFetchState, reduceResourceClaimsFetchState] = useReducer(k8sFetchStateReducer, null);
   const [userNamespacesFetchState, reduceUserNamespacesFetchState] = useReducer(k8sFetchStateReducer, null);
   const [modalState, setModalState] = React.useState<ModalState>({});
-  const modalAction = useRef(null);
-  const modalScheduleAction = useRef(null);
+  const [modalAction, openModalAction] = useModal();
+  const [modalScheduleAction, openModalScheduleAction] = useModal();
   const [selectedUids, setSelectedUids] = React.useState<string[]>([]);
 
   const serviceNamespaces: ServiceNamespace[] = enableFetchUserNamespaces
@@ -367,14 +364,14 @@ const AllServicesList: React.FunctionComponent<ServicesListProps> = ({ serviceNa
     ({ modal, action, resourceClaim }: { modal: string; action: string; resourceClaim?: ResourceClaim }) => {
       if (modal === 'action') {
         setModalState({ action, resourceClaim });
-        modalAction.current.open();
+        openModalAction();
       }
       if (modal === 'scheduleAction') {
         setModalState({ action, resourceClaim });
-        modalScheduleAction.current.open();
+        openModalScheduleAction();
       }
     },
-    [modalAction, modalScheduleAction, setModalState]
+    [openModalAction, openModalScheduleAction]
   );
 
   // Show loading until whether the user is admin is determined.
@@ -408,10 +405,10 @@ const AllServicesList: React.FunctionComponent<ServicesListProps> = ({ serviceNa
 
   return (
     <>
-      <Modal ref={modalAction} onConfirm={onModalAction} title={null}>
+      <Modal ref={modalAction} onConfirm={onModalAction} passModifiers={true}>
         <ServicesAction action={modalState.action} resourceClaim={modalState.resourceClaim} />
       </Modal>
-      <Modal ref={modalScheduleAction} onConfirm={onModalScheduleAction} title={null}>
+      <Modal ref={modalScheduleAction} onConfirm={onModalScheduleAction} passModifiers={true}>
         <ServicesScheduleAction action={modalState.action} resourceClaim={modalState.resourceClaim} />
       </Modal>
       {serviceNamespaces.length > 1 ? (
