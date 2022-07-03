@@ -1,7 +1,6 @@
-import React, { useEffect, useReducer, useRef } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { Link, Redirect, useHistory, useLocation } from 'react-router-dom';
-
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -14,32 +13,26 @@ import {
   SplitItem,
   Title,
 } from '@patternfly/react-core';
-
-import { ExclamationTriangleIcon } from '@patternfly/react-icons';
-
-import { deleteWorkshop, listNamespaces, listWorkshops } from '@app/api';
-import { Namespace, NamespaceList, Workshop, WorkshopList, ServiceNamespace } from '@app/types';
-import { displayName } from '@app/util';
-
-import { cancelFetchActivity, k8sFetchStateReducer } from '@app/K8sFetchState';
-
-import { selectServiceNamespaces, selectUserIsAdmin, selectWorkshopNamespaces } from '@app/store';
-
+import { ExclamationTriangleIcon, TrashIcon } from '@patternfly/react-icons';
+import { apiPaths, deleteWorkshop, fetcher } from '@app/api';
+import { NamespaceList, Workshop, WorkshopList, ServiceNamespace } from '@app/types';
+import { compareK8sObjects, displayName } from '@app/util';
+import { selectServiceNamespaces, selectUserIsAdmin } from '@app/store';
 import KeywordSearchInput from '@app/components/KeywordSearchInput';
-import LoadingIcon from '@app/components/LoadingIcon';
 import LocalTimestamp from '@app/components/LocalTimestamp';
 import OpenshiftConsoleLink from '@app/components/OpenshiftConsoleLink';
 import SelectableTable from '@app/components/SelectableTable';
 import TimeInterval from '@app/components/TimeInterval';
-
 import ServiceNamespaceSelect from '@app/Services/ServiceNamespaceSelect';
-
 import WorkshopActions from './WorkshopActions';
-import WorkshopDeleteModal from './WorkshopDeleteModal';
+import ButtonCircleIcon from '@app/components/ButtonCircleIcon';
+import Modal, { useModal } from '@app/Modal/Modal';
+import useSWR from 'swr';
+import useSWRInfinite from 'swr/infinite';
 
-import './workshops.css';
+import './workshops-list.css';
 
-const FETCH_BATCH_LIMIT = 30;
+const FETCH_BATCH_LIMIT = 50;
 
 function keywordMatch(workshop: Workshop, keyword: string): boolean {
   const keywordLowerCased = keyword.toLowerCase();
@@ -53,18 +46,12 @@ function keywordMatch(workshop: Workshop, keyword: string): boolean {
   return false;
 }
 
-interface ModalState {
-  action?: string;
-  modal?: string;
-  workshop?: Workshop;
-}
-
 const WorkshopsList: React.FC<{
   serviceNamespaceName: string;
 }> = ({ serviceNamespaceName }) => {
   const history = useHistory();
   const location = useLocation();
-  const componentWillUnmount = useRef(false);
+  const [modalAction, openModalAction] = useModal();
   const urlSearchParams = new URLSearchParams(location.search);
   const keywordFilter = urlSearchParams.has('search')
     ? urlSearchParams
@@ -75,99 +62,126 @@ const WorkshopsList: React.FC<{
     : null;
 
   const sessionServiceNamespaces = useSelector(selectServiceNamespaces);
-  const sessionWorkshopNamespaces = useSelector(selectWorkshopNamespaces);
   const userIsAdmin = useSelector(selectUserIsAdmin);
-
-  const [modalState, setModalState] = React.useState<ModalState>({});
+  const enableFetchUserNamespaces: boolean = userIsAdmin; // As admin we need to fetch service namespaces for the service namespace dropdown
+  const [modalState, setModalState] = React.useState<{ action?: string; workshop?: Workshop }>({});
   const [selectedUids, setSelectedUids] = React.useState([]);
-  const [userNamespacesFetchState, reduceUserNamespacesFetchState] = useReducer(k8sFetchStateReducer, null);
-  const [workshopsFetchState, reduceWorkshopsFetchState] = useReducer(k8sFetchStateReducer, null);
 
-  const serviceNamespaces: ServiceNamespace[] = userIsAdmin
-    ? userNamespacesFetchState?.items
-      ? userNamespacesFetchState.items.map((ns: Namespace): ServiceNamespace => {
+  const showModal = useCallback(
+    ({ action, workshop }: { action: string; workshop?: Workshop }) => {
+      setModalState({ action, workshop });
+      openModalAction();
+    },
+    [openModalAction]
+  );
+
+  const { data: userNamespaceList } = useSWR<NamespaceList>(
+    enableFetchUserNamespaces ? apiPaths.NAMESPACES({ labelSelector: 'usernamespace.gpte.redhat.com/user-uid' }) : '',
+    fetcher
+  );
+  const serviceNamespaces: ServiceNamespace[] = useMemo(() => {
+    return enableFetchUserNamespaces
+      ? userNamespaceList.items.map((ns): ServiceNamespace => {
           return {
             name: ns.metadata.name,
             displayName: ns.metadata.annotations['openshift.io/display-name'] || ns.metadata.name,
           };
         })
-      : []
-    : sessionWorkshopNamespaces;
-
+      : sessionServiceNamespaces;
+  }, [enableFetchUserNamespaces, sessionServiceNamespaces, userNamespaceList]);
   const serviceNamespace: ServiceNamespace = serviceNamespaces.find((ns) => ns.name === serviceNamespaceName) || {
     name: serviceNamespaceName,
     displayName: serviceNamespaceName,
   };
 
-  const fetchNamespaces: string[] = serviceNamespaceName
-    ? [serviceNamespaceName]
-    : userIsAdmin
-    ? null
-    : serviceNamespaces.map((ns) => ns.name);
-
-  const workshops: Workshop[] = (workshopsFetchState?.filteredItems as Workshop[]) || [];
-
-  // Trigger continue fetching more resource claims on scroll.
-  const primaryAppContainer = document.getElementById('primary-app-container');
-  primaryAppContainer.onscroll = (e) => {
-    const scrollable = e.target as any;
-    const scrollRemaining = scrollable.scrollHeight - scrollable.scrollTop - scrollable.clientHeight;
-    if (
-      scrollRemaining < 500 &&
-      !workshopsFetchState?.finished &&
-      workshopsFetchState.limit <= workshopsFetchState.filteredItems.length
-    ) {
-      reduceWorkshopsFetchState({
-        type: 'modify',
-        limit: workshopsFetchState.limit + FETCH_BATCH_LIMIT,
-      });
+  const {
+    data: workshopsPages,
+    mutate,
+    size,
+    setSize,
+  } = useSWRInfinite<WorkshopList>(
+    (index, previousPageData: WorkshopList) => {
+      if (previousPageData && !previousPageData.metadata?.continue) {
+        return null;
+      }
+      const continueId = index === 0 ? '' : previousPageData.metadata?.continue;
+      return apiPaths.WORKSHOPS({ namespace: serviceNamespaceName, limit: FETCH_BATCH_LIMIT, continueId });
+    },
+    fetcher,
+    {
+      refreshInterval: 8000,
+      revalidateFirstPage: true,
+      revalidateAll: true,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      compare: (currentData: any, newData: any) => {
+        if (currentData === newData) return true;
+        if (!currentData || currentData.length === 0) return false;
+        if (!newData || newData.length === 0) return false;
+        if (currentData.length !== newData.length) return false;
+        for (let i = 0; i < currentData.length; i++) {
+          if (!compareK8sObjects(currentData[i].items, newData[i].items)) return false;
+        }
+        return true;
+      },
     }
-  };
+  );
+  const isReachingEnd = workshopsPages && !workshopsPages[workshopsPages.length - 1].metadata.continue;
+  const isLoadingInitialData = !workshopsPages;
+  const isLoadingMore =
+    isLoadingInitialData || (size > 0 && workshopsPages && typeof workshopsPages[size - 1] === 'undefined');
 
-  function filterWorkshop(workshop: Workshop): boolean {
-    // Hide anything pending deletion
-    if (workshop.metadata.deletionTimestamp) {
-      return false;
-    }
-    if (keywordFilter) {
-      for (const keyword of keywordFilter) {
-        if (!keywordMatch(workshop, keyword)) {
-          return false;
+  const revalidate = useCallback(
+    ({ updatedItems, action }: { updatedItems: Workshop[]; action: 'update' | 'delete' }) => {
+      const workshopsPagesCpy = JSON.parse(JSON.stringify(workshopsPages));
+      let p: WorkshopList;
+      let i: number;
+      for ([i, p] of workshopsPagesCpy.entries()) {
+        for (const updatedItem of updatedItems) {
+          const foundIndex = p.items.findIndex((r) => r.metadata.uid === updatedItem.metadata.uid);
+          if (foundIndex > -1) {
+            if (action === 'update') {
+              workshopsPagesCpy[i].items[foundIndex] = updatedItem;
+            } else if (action === 'delete') {
+              workshopsPagesCpy[i].items.splice(foundIndex, 1);
+            }
+            mutate(workshopsPagesCpy);
+          }
         }
       }
-    }
-    return true;
-  }
+    },
+    [mutate, workshopsPages]
+  );
+  const filterWorkshop = useCallback(
+    (workshop: Workshop): boolean => {
+      // Hide anything pending deletion
+      if (workshop.metadata.deletionTimestamp) {
+        return false;
+      }
+      if (keywordFilter) {
+        for (const keyword of keywordFilter) {
+          if (!keywordMatch(workshop, keyword)) {
+            return false;
+          }
+        }
+      }
+      return true;
+    },
+    [keywordFilter]
+  );
 
-  async function fetchUserNamespaces(): Promise<void> {
-    const userNamespaceList: NamespaceList = await listNamespaces({
-      labelSelector: 'usernamespace.gpte.redhat.com/user-uid',
-    });
-    if (!userNamespacesFetchState.activity.canceled) {
-      reduceUserNamespacesFetchState({
-        type: 'post',
-        k8sObjectList: userNamespaceList,
-      });
-    }
-  }
+  const workshops: Workshop[] = useMemo(
+    () => [].concat(...workshopsPages.map((page) => page.items)).filter(filterWorkshop) || [],
+    [filterWorkshop, workshopsPages]
+  );
 
-  async function fetchWorkshops(): Promise<void> {
-    const workshopList: WorkshopList = await listWorkshops({
-      continue: workshopsFetchState.continue,
-      limit: FETCH_BATCH_LIMIT,
-      namespace: workshopsFetchState.namespace,
-    });
-    if (!workshopsFetchState.activity.canceled) {
-      reduceWorkshopsFetchState({
-        type: 'post',
-        k8sObjectList: workshopList,
-        refreshInterval: 10000,
-        refresh: (): void => {
-          reduceWorkshopsFetchState({ type: 'startRefresh' });
-        },
-      });
+  // Trigger continue fetching more resource claims on scroll.
+  const scrollHandler = (e: React.UIEvent<HTMLDivElement>) => {
+    const scrollable = e.currentTarget;
+    const scrollRemaining = scrollable.scrollHeight - scrollable.scrollTop - scrollable.clientHeight;
+    if (scrollRemaining < 500 && !isReachingEnd && !isLoadingMore) {
+      setSize(size + 1);
     }
-  }
+  };
 
   async function onWorkshopDeleteConfirm(): Promise<void> {
     const deletedWorkshops: Workshop[] = [];
@@ -182,80 +196,7 @@ const WorkshopsList: React.FC<{
         }
       }
     }
-    reduceWorkshopsFetchState({
-      type: 'removeItems',
-      items: deletedWorkshops,
-    });
-    setModalState({});
-  }
-
-  // Track unmount for other effect cleanups
-  useEffect(() => {
-    return () => {
-      componentWillUnmount.current = true;
-    };
-  }, []);
-
-  // Trigger user namespaces fetch for admin.
-  useEffect(() => {
-    if (userIsAdmin) {
-      reduceUserNamespacesFetchState({ type: 'startFetch' });
-    }
-  }, [userIsAdmin]);
-
-  // Fetch or continue fetching user namespaces
-  useEffect(() => {
-    if (userNamespacesFetchState?.canContinue) {
-      fetchUserNamespaces();
-    }
-    return () => {
-      if (componentWillUnmount.current) {
-        cancelFetchActivity(userNamespacesFetchState);
-      }
-    };
-  }, [userNamespacesFetchState]);
-
-  // Fetch or continue fetching resource claims
-  useEffect(() => {
-    if (
-      workshopsFetchState?.canContinue &&
-      (workshopsFetchState.refreshing || workshopsFetchState.filteredItems.length < workshopsFetchState.limit)
-    ) {
-      fetchWorkshops();
-    }
-    return () => {
-      if (componentWillUnmount.current) {
-        cancelFetchActivity(workshopsFetchState);
-      }
-    };
-  }, [workshopsFetchState]);
-
-  // Reload on filter change
-  useEffect(() => {
-    if (!workshopsFetchState || JSON.stringify(fetchNamespaces) !== JSON.stringify(workshopsFetchState?.namespaces)) {
-      reduceWorkshopsFetchState({
-        type: 'startFetch',
-        filter: filterWorkshop,
-        limit: FETCH_BATCH_LIMIT,
-        namespaces: fetchNamespaces,
-      });
-    } else if (workshopsFetchState) {
-      reduceWorkshopsFetchState({
-        type: 'modify',
-        filter: filterWorkshop,
-      });
-    }
-  }, [JSON.stringify(fetchNamespaces), JSON.stringify(keywordFilter)]);
-
-  // Show loading until whether the user is admin is determined.
-  if (userIsAdmin === null || (userIsAdmin && !userNamespacesFetchState?.finished)) {
-    return (
-      <PageSection>
-        <EmptyState variant="full">
-          <EmptyStateIcon icon={LoadingIcon} />
-        </EmptyState>
-      </PageSection>
-    );
+    revalidate({ updatedItems: deletedWorkshops, action: 'delete' });
   }
 
   if (serviceNamespaces.length === 0) {
@@ -277,18 +218,18 @@ const WorkshopsList: React.FC<{
   }
 
   return (
-    <>
-      {modalState?.action === 'delete' ? (
-        <WorkshopDeleteModal
-          key="deleteModal"
-          isOpen={true}
-          onClose={() => setModalState({})}
-          onConfirm={onWorkshopDeleteConfirm}
-          workshop={modalState.workshop}
-        />
-      ) : null}
+    <div onScroll={scrollHandler} style={{ display: 'flex', flexDirection: 'column', overflow: 'auto', flexGrow: 1 }}>
+      <Modal
+        ref={modalAction}
+        onConfirm={onWorkshopDeleteConfirm}
+        title={
+          modalState.workshop ? `Delete workshop ${displayName(modalState.workshop)}?` : 'Delete selected workshops?'
+        }
+      >
+        <p>Provisioned services will be deleted.</p>
+      </Modal>
       {serviceNamespaces.length > 1 ? (
-        <PageSection key="topbar" className="workshops-topbar" variant={PageSectionVariants.light}>
+        <PageSection key="topbar" className="workshops-list__topbar" variant={PageSectionVariants.light}>
           <ServiceNamespaceSelect
             currentNamespaceName={serviceNamespaceName}
             serviceNamespaces={serviceNamespaces}
@@ -302,7 +243,7 @@ const WorkshopsList: React.FC<{
           />
         </PageSection>
       ) : null}
-      <PageSection key="head" className="workshops-head" variant={PageSectionVariants.light}>
+      <PageSection key="head" className="workshops-list__head" variant={PageSectionVariants.light}>
         <Split hasGutter>
           <SplitItem isFilled>
             {serviceNamespaces.length > 1 && serviceNamespaceName ? (
@@ -342,36 +283,28 @@ const WorkshopsList: React.FC<{
               position="right"
               workshopName="Selected"
               actionHandlers={{
-                delete: () => setModalState({ modal: 'action', action: 'delete' }),
+                delete: () => showModal({ action: 'delete' }),
               }}
             />
           </SplitItem>
         </Split>
       </PageSection>
       {workshops.length === 0 ? (
-        workshopsFetchState?.finished ? (
-          <PageSection key="workshops-list-empty">
-            <EmptyState variant="full">
-              <EmptyStateIcon icon={ExclamationTriangleIcon} />
-              <Title headingLevel="h1" size="lg">
-                No workshops found.
-              </Title>
-              {keywordFilter ? (
-                <EmptyStateBody>No workshops matched search.</EmptyStateBody>
-              ) : sessionServiceNamespaces.find((ns) => ns.name == serviceNamespaceName) ? (
-                <EmptyStateBody>
-                  Request workshops using the <Link to="/catalog">catalog</Link>.
-                </EmptyStateBody>
-              ) : null}
-            </EmptyState>
-          </PageSection>
-        ) : (
-          <PageSection key="workshops-list-loading">
-            <EmptyState variant="full">
-              <EmptyStateIcon icon={LoadingIcon} />
-            </EmptyState>
-          </PageSection>
-        )
+        <PageSection key="workshops-list-empty">
+          <EmptyState variant="full">
+            <EmptyStateIcon icon={ExclamationTriangleIcon} />
+            <Title headingLevel="h1" size="lg">
+              No workshops found.
+            </Title>
+            {keywordFilter ? (
+              <EmptyStateBody>No workshops matched search.</EmptyStateBody>
+            ) : sessionServiceNamespaces.find((ns) => ns.name == serviceNamespaceName) ? (
+              <EmptyStateBody>
+                Request workshops using the <Link to="/catalog">catalog</Link>.
+              </EmptyStateBody>
+            ) : null}
+          </EmptyState>
+        </PageSection>
       ) : (
         <PageSection key="body" className="workshops-list" variant={PageSectionVariants.light}>
           <SelectableTable
@@ -391,7 +324,7 @@ const WorkshopsList: React.FC<{
             }}
             rows={workshops.map((workshop: Workshop) => {
               const actionHandlers = {
-                delete: () => setModalState({ action: 'delete', modal: 'action', workshop: workshop }),
+                delete: () => showModal({ action: 'delete', workshop }),
               };
 
               const workshopServiceNamespace: ServiceNamespace = serviceNamespaces.find(
@@ -448,9 +381,22 @@ const WorkshopsList: React.FC<{
                   (<TimeInterval key="interval" toTimestamp={workshop.metadata.creationTimestamp} />)
                 </>,
                 // Actions
-                <>
-                  <WorkshopActions position="right" workshop={workshop} actionHandlers={actionHandlers} />
-                </>
+                <React.Fragment key="actions">
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'row',
+                      gap: 'var(--pf-global--spacer--sm)',
+                    }}
+                  >
+                    <ButtonCircleIcon
+                      key="actions__delete"
+                      onClick={actionHandlers.delete}
+                      description="Delete"
+                      icon={TrashIcon}
+                    />
+                  </div>
+                </React.Fragment>
               );
               return {
                 cells: cells,
@@ -472,7 +418,7 @@ const WorkshopsList: React.FC<{
           />
         </PageSection>
       )}
-    </>
+    </div>
   );
 };
 
