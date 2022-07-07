@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { ErrorBoundary } from 'react-error-boundary';
+import { ErrorBoundary, useErrorHandler } from 'react-error-boundary';
 import { useSelector } from 'react-redux';
 import { useHistory, useLocation, Link } from 'react-router-dom';
 import { ExclamationTriangleIcon, OutlinedClockIcon } from '@patternfly/react-icons';
@@ -86,7 +86,7 @@ const ServicesItemComponent: React.FC<{
   } = useSWR<ResourceClaim>(apiPaths.RESOURCE_CLAIM({ namespace: serviceNamespaceName, resourceClaimName }), fetcher, {
     refreshInterval: 8000,
   });
-  if (error) throw error;
+  useErrorHandler(error?.status === 404 ? error : null);
   // As admin we need to fetch service namespaces for the service namespace dropdown
   const enableFetchUserNamespaces: boolean = userIsAdmin;
   const { data: userNamespaceList } = useSWR<NamespaceList>(
@@ -194,15 +194,9 @@ const ServicesItemComponent: React.FC<{
     mutate(resourceClaimUpdate);
   }
 
-  async function onWorkshopCreate({
-    resourceClaim,
-    workshop,
-  }: {
-    resourceClaim: ResourceClaim;
-    workshop: Workshop;
-  }): Promise<void> {
-    mutate(resourceClaim);
-    mutateWorkshop(workshop);
+  function onModalWorkshopCreate() {
+    mutate();
+    mutateWorkshop();
   }
 
   async function onCheckStatusRequest(): Promise<void> {
@@ -238,7 +232,7 @@ const ServicesItemComponent: React.FC<{
       <Modal ref={modalAction} onConfirm={onModalAction} passModifiers={true}>
         <ServicesAction action={modalState.action} resourceClaim={resourceClaim} />
       </Modal>
-      <Modal ref={modalCreateWorkshop} onConfirm={onWorkshopCreate} passModifiers={true}>
+      <Modal ref={modalCreateWorkshop} onConfirm={onModalWorkshopCreate} passModifiers={true}>
         <ServicesCreateWorkshop resourceClaim={resourceClaim} />
       </Modal>
       <Modal ref={modalScheduleAction} onConfirm={onModalScheduleAction} passModifiers={true}>
@@ -708,7 +702,6 @@ const NotFoundComponent: React.FC<{
     </EmptyStateBody>
   </EmptyState>
 );
-
 const ServicesItem: React.FC<{
   activeTab: string;
   resourceClaimName: string;
