@@ -61,7 +61,7 @@
     "svg-url-loader": "^8.0.0",
     "terser-webpack-plugin": "^5.3.6",
     "ts-jest": "^28.0.8",
-    "ts-loader": "^9.3.1",
+    "ts-loader": "^9.4.1",
     "tsconfig-paths-webpack-plugin": "^4.0.0",
     "tslib": "^2.4.0",
     "typescript": "^4.8.3",
@@ -69,7 +69,7 @@
     "webpack": "^5.74.0",
     "webpack-bundle-analyzer": "^4.6.1",
     "webpack-cli": "^4.10.0",
-    "webpack-dev-server": "^4.11.0",
+    "webpack-dev-server": "^4.11.1",
     "webpack-merge": "^5.8.0"
   },
   "dependencies": {
@@ -88,7 +88,7 @@
     "react-dom": "^17.0.2",
     "react-error-boundary": "^3.1.4",
     "react-redux": "^8.0.2",
-    "react-router-dom": "^6.4.0",
+    "react-router-dom": "^6.4.1",
     "react-star-ratings": "^2.3.0",
     "redux": "^4.2.0",
     "reselect": "^4.1.5",
