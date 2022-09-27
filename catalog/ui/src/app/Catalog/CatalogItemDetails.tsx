@@ -91,14 +91,9 @@ const CatalogItemDetails: React.FC<{ catalogItem: CatalogItem; onClose: () => vo
     }
   );
 
-  const userHasInstanceOfCatalogItem = userResourceClaims.some(
-    (rc) =>
-      namespace === rc.metadata.labels?.[`${BABYLON_DOMAIN}/catalogItemNamespace`] &&
-      name === rc.metadata.labels?.[`${BABYLON_DOMAIN}/catalogItemName`]
+  const services = userResourceClaims.filter(
+    (rc) => !rc.metadata.labels?.['babylon.gpte.redhat.com/workshop-provision']
   );
-  const userDistinctCatalogItems = [
-    ...new Set(userResourceClaims.map((item) => item.metadata.labels?.[`${BABYLON_DOMAIN}/catalogItemName`])),
-  ];
 
   const isDisabled = getIsDisabled(catalogItem);
   const { code: statusCode, name: statusName } = getStatus(catalogItem);
@@ -109,26 +104,15 @@ const CatalogItemDetails: React.FC<{ catalogItem: CatalogItem; onClose: () => vo
       ? CatalogItemAccess.Allow
       : accessCheckResult === 'deny'
       ? CatalogItemAccess.Deny
-      : userHasInstanceOfCatalogItem
-      ? CatalogItemAccess.Deny
-      : userDistinctCatalogItems.length >= 3
+      : services.length >= 5
       ? CatalogItemAccess.Deny
       : accessCheckResult === 'allow'
       ? CatalogItemAccess.Allow
       : CatalogItemAccess.RequestInformation;
   const catalogItemAccessDenyReason =
-    catalogItemAccess !== CatalogItemAccess.Deny ? null : userHasInstanceOfCatalogItem ? (
+    catalogItemAccess !== CatalogItemAccess.Deny ? null : services.length >= 5 ? (
       <p>
-        You already have an instance of this catalog item. You will not be able to request another instance of this
-        application until you retire the existing service. If you feel this is an error, please{' '}
-        <a href={getHelpLink()} target="_blank" rel="noopener noreferrer">
-          contact us
-        </a>
-        .
-      </p>
-    ) : userDistinctCatalogItems.length >= 3 ? (
-      <p>
-        You have reached your quota of 3 services. You will not be able to request any new applications until you retire
+        You have reached your quota of 5 services. You will not be able to request any new applications until you retire
         existing services. If you feel this is an error, please{' '}
         <a href={getHelpLink()} target="_blank" rel="noopener noreferrer">
           contact us
