@@ -1,7 +1,7 @@
 import React from 'react';
 import { DropdownPosition } from '@patternfly/react-core';
 import { ActionDropdown, ActionDropdownItem } from '@app/components/ActionDropdown';
-import { checkResourceClaimCanStart, checkResourceClaimCanStop } from '@app/util';
+import { BABYLON_DOMAIN, checkResourceClaimCanStart, checkResourceClaimCanStop } from '@app/util';
 import { EllipsisVIcon } from '@patternfly/react-icons';
 
 const ServiceActions: React.FC<{
@@ -14,7 +14,8 @@ const ServiceActions: React.FC<{
   iconOnly?: boolean;
 }> = ({ actionHandlers, className, isDisabled, position, resourceClaim, serviceName, iconOnly = false }) => {
   const actionDropdownItems: any[] = [];
-  const isPartOfWorkshop = resourceClaim?.metadata?.labels?.[`babylon.gpte.redhat.com/workshop-provision`];
+  const workshopProvisionName = resourceClaim?.metadata?.labels?.[`${BABYLON_DOMAIN}/workshop-provision`];
+  const isPartOfWorkshop = !!workshopProvisionName;
   const canStart = resourceClaim ? checkResourceClaimCanStart(resourceClaim) : true;
   const canStop = resourceClaim ? checkResourceClaimCanStop(resourceClaim) : true;
 
@@ -73,6 +74,12 @@ const ServiceActions: React.FC<{
   if (actionHandlers.getCost) {
     actionDropdownItems.push(
       <ActionDropdownItem key="getCost" label="Get amount spent" onSelect={actionHandlers.getCost} />
+    );
+  }
+
+  if (actionHandlers.manageWorkshop) {
+    actionDropdownItems.push(
+      <ActionDropdownItem key="manageWorkshop" label="Manage Workshop" onSelect={actionHandlers.manageWorkshop} />
     );
   }
   return (
