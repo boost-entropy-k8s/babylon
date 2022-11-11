@@ -73,15 +73,15 @@ import TimeInterval from '@app/components/TimeInterval';
 import WorkshopsItemDetails from '@app/Workshops/WorkshopsItemDetails';
 import WorkshopsItemUserAssignments from '@app/Workshops/WorkshopsItemUserAssignments';
 import { getAutoStopTime, getMostRelevantResourceAndTemplate } from './service-utils';
-import ServiceStatus from './ServiceStatus';
 import ServicesAction from './ServicesAction';
 import ServiceActions from './ServiceActions';
-import ServiceItemStatus from './ServiceItemStatus';
 import ServiceOpenStackConsole from './ServiceOpenStackConsole';
 import ServiceNamespaceSelect from './ServiceNamespaceSelect';
 import ServicesCreateWorkshop from './ServicesCreateWorkshop';
 import ServicesScheduleAction from './ServicesScheduleAction';
 import ServiceUsers from './ServiceUsers';
+import ServiceStatus from './ServiceStatus';
+import ServiceItemStatus from './ServiceItemStatus';
 
 import './services-item.css';
 
@@ -113,18 +113,18 @@ const ComponentDetailsList: React.FC<{
   provisionDataEntries,
 }) => (
   <DescriptionList isHorizontal>
+    <DescriptionListGroup>
+      <DescriptionListTerm>Status</DescriptionListTerm>
+      <DescriptionListDescription>
+        <ServiceStatus
+          creationTime={Date.parse(resourceClaim.metadata.creationTimestamp)}
+          resource={resourceState}
+          resourceTemplate={resourceSpec?.template}
+        />
+      </DescriptionListDescription>
+    </DescriptionListGroup>
     {resourceState?.kind === 'AnarchySubject' ? (
       <>
-        <DescriptionListGroup>
-          <DescriptionListTerm>Status</DescriptionListTerm>
-          <DescriptionListDescription>
-            <ServiceStatus
-              creationTime={Date.parse(resourceClaim.metadata.creationTimestamp)}
-              resource={resourceState}
-              resourceTemplate={resourceSpec.template}
-            />
-          </DescriptionListDescription>
-        </DescriptionListGroup>
         {externalPlatformUrl || isPartOfWorkshop ? null : startDate && Number(startDate) > Date.now() ? (
           <DescriptionListGroup>
             <DescriptionListTerm>Scheduled Start</DescriptionListTerm>
@@ -571,7 +571,7 @@ const ServicesItemComponent: React.FC<{
                 <DescriptionListGroup>
                   <DescriptionListTerm>GUID</DescriptionListTerm>
                   <DescriptionListDescription>
-                    {isAdmin && resourceClaim?.status?.resourceHandle ? (
+                    {isAdmin && resourceClaim.status?.resourceHandle ? (
                       <>
                         <Link key="admin" to={`/admin/resourcehandles/${resourceClaim.status.resourceHandle.name}`}>
                           <code>{resourceClaim.status.resourceHandle.name.substring(5)}</code>
@@ -579,7 +579,7 @@ const ServicesItemComponent: React.FC<{
                         <OpenshiftConsoleLink key="console" reference={resourceClaim.status.resourceHandle} />
                       </>
                     ) : (
-                      <code>{resourceClaim?.status?.resourceHandle?.name.substring(5) || '...'}</code>
+                      <code>{resourceClaim.status?.resourceHandle?.name.substring(5) || '...'}</code>
                     )}
                   </DescriptionListDescription>
                 </DescriptionListGroup>
@@ -616,7 +616,7 @@ const ServicesItemComponent: React.FC<{
                   </DescriptionListDescription>
                 </DescriptionListGroup>
 
-                {!externalPlatformUrl && !isPartOfWorkshop && resourceClaim?.status?.lifespan?.end ? (
+                {!externalPlatformUrl && !isPartOfWorkshop && resourceClaim.status?.lifespan?.end ? (
                   <DescriptionListGroup>
                     <DescriptionListTerm>Auto-destroy</DescriptionListTerm>
                     {resourceClaim.status?.lifespan?.end ? (
@@ -703,7 +703,7 @@ const ServicesItemComponent: React.FC<{
                   )}
                 >
                   <div>
-                    {resourceClaim.spec.resources.map((resourceSpec, idx) => {
+                    {(resourceClaim.spec?.resources || []).map((resourceSpec, idx) => {
                       const resourceStatus = resourceClaim.status?.resources?.[idx];
                       const resourceState = resourceStatus?.state;
                       const componentDisplayName =

@@ -1,8 +1,9 @@
 import React from 'react';
+// import PackageIcon from '@patternfly/react-icons/dist/js/icons/package-icon';
 import { BABYLON_DOMAIN } from '@app/util';
 import { CatalogItem } from '@app/types';
 import openshiftIcon from './icons/openshift.png';
-// import { PackageIcon } from '@patternfly/react-icons';
+
 // TODO: Use the patternfly icon instead of the custom one, right now is failing in the Terser minification
 const PackageIcon = (props: React.HTMLAttributes<SVGElement>) => (
   <svg
