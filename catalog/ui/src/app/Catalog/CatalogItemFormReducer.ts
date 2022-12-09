@@ -339,14 +339,16 @@ function reduceFormStateTermsOfServiceAgreed(initialState: FormState, termsOfSer
 }
 
 function reduceFormStateWorkshop(initialState: FormState, workshop: WorkshopProps = null): FormState {
-  const salesforceId = { ...initialState.salesforceId, required: salesforceIdRequired({ ...initialState, workshop }) };
+  const isSalesforceIdRequired = salesforceIdRequired({ ...initialState, workshop });
+  const salesforceId = { ...initialState.salesforceId, required: isSalesforceIdRequired };
   if (workshop) {
     return {
       ...initialState,
       salesforceId,
       conditionChecks: {
         ...initialState.conditionChecks,
-        completed: initialState.salesforceId.value ? false : initialState.conditionChecks.completed,
+        completed:
+          isSalesforceIdRequired && initialState.salesforceId.value ? false : initialState.conditionChecks.completed,
       },
       workshop,
     };
@@ -380,8 +382,8 @@ function reduceFormStateStartDate(initialState: FormState, startDate: Date): For
 }
 
 function reduceFormStatePurpose(initialState: FormState, purpose: string): FormState {
-  const [_activity, _purpose] = purpose.split('-');
-  const newPurpose = !!_activity && !!_purpose ? `${_activity}-${_purpose}` : null;
+  const [_activity, _purpose] = purpose.split('-').map((x) => x.trim());
+  const newPurpose = !!_activity && !!_purpose ? `${_activity} - ${_purpose}` : null;
   if (_activity === 'Customer Activity') {
     return {
       ...initialState,
@@ -405,7 +407,7 @@ function reduceFormStatePurpose(initialState: FormState, purpose: string): FormS
 
 function salesforceIdRequired(state: FormState): boolean {
   if (state.purpose) {
-    const [_activity] = state.purpose.split('-');
+    const [_activity] = state.purpose.split('-').map((x) => x.trim());
     if (_activity === 'Customer Activity') return true;
   }
   if (state.user.isAdmin) return false;
@@ -417,10 +419,11 @@ function reduceFormStateSalesforceId(
   initialState: FormState,
   salesforceId: { required: boolean; value: string; valid: boolean }
 ): FormState {
-  if (!initialState.salesforceId.required) {
+  const isSalesforceIdRequired = salesforceIdRequired(initialState);
+  if (!isSalesforceIdRequired) {
     for (const [, parameterState] of Object.entries(initialState.parameters)) {
-      const parameterSpec: CatalogItemSpecParameter = parameterState.spec;
-      if (parameterSpec.validation.match(checkSalesforceIdRegex) !== null) {
+      const parameterSpec = parameterState.spec;
+      if (parameterSpec.validation && parameterSpec.validation.match(checkSalesforceIdRegex) !== null) {
         return {
           ...initialState,
           salesforceId,
@@ -435,7 +438,7 @@ function reduceFormStateSalesforceId(
     ...initialState,
     salesforceId,
     conditionChecks: {
-      completed: initialState.salesforceId.required ? false : true,
+      completed: isSalesforceIdRequired ? false : true,
     },
   };
 }
@@ -481,7 +484,7 @@ export function checkEnableSubmit(state: FormState): boolean {
     return false;
   }
   if (state.purpose) {
-    const [_purpose, _activity] = state.purpose.split('-');
+    const [_purpose, _activity] = state.purpose.split('-').map((x) => x.trim());
     if (!_purpose || !_activity) {
       return false;
     }
