@@ -139,6 +139,8 @@ const CatalogItemFormData: React.FC<{ namespace: string; catalogItemName: string
       }
     }
     parameterValues['purpose'] = formState.purpose;
+    const [activity] = formState.purpose.split('-').map((x) => x.trim());
+    parameterValues['purpose_activity'] = activity;
     if (formState.salesforceId.value) {
       parameterValues['salesforce_id'] = formState.salesforceId.value;
     }
@@ -266,22 +268,16 @@ const CatalogItemFormData: React.FC<{ namespace: string; catalogItemName: string
             </span>
           }
           helperTextInvalid={
-            <FormHelperText
-              icon={<ExclamationCircleIcon />}
-              isError
-              isHidden={
-                !formState.salesforceId.value || !formState.salesforceId.required || formState.salesforceId.valid
-              }
-            >
-              {formState.workshop
-                ? 'A valid Salesforce ID is required for enabling the workshop user interface'
-                : 'A valid Salesforce ID is required for all Customer Facing Events'}
+            <FormHelperText icon={<ExclamationCircleIcon />} isError isHidden={false}>
+              {formState.purpose && formState.purpose.startsWith('Customer Activity')
+                ? 'A valid Salesforce ID is required for all Customer Facing Events'
+                : null}
             </FormHelperText>
           }
           validated={
             formState.salesforceId.valid
               ? 'success'
-              : formState.salesforceId.value && formState.salesforceId.required
+              : formState.salesforceId.value && formState.salesforceId.required && formState.conditionChecks.completed
               ? 'error'
               : 'default'
           }
@@ -301,7 +297,7 @@ const CatalogItemFormData: React.FC<{ namespace: string; catalogItemName: string
               validated={
                 formState.salesforceId.value && formState.salesforceId.valid
                   ? 'success'
-                  : formState.salesforceId.value && formState.salesforceId.required
+                  : formState.salesforceId.value && formState.conditionChecks.completed
                   ? 'error'
                   : 'default'
               }
