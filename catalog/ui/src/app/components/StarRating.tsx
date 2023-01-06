@@ -2,12 +2,14 @@ import React, { useCallback, useMemo, useState } from 'react';
 import OutlinedStarIcon from '@patternfly/react-icons/dist/js/icons/outlined-star-icon';
 import StarIcon from '@patternfly/react-icons/dist/js/icons/star-icon';
 
-const StarRating: React.FC<{ count: number; rating?: number; onRating?: (id: number) => void; readOnly?: boolean }> = ({
-  count,
-  rating = null,
-  onRating,
-  readOnly = false,
-}) => {
+const StarRating: React.FC<{
+  count: number;
+  rating?: number;
+  total?: number;
+  onRating?: (id: number) => void;
+  readOnly?: boolean;
+  hideIfNotRated?: boolean;
+}> = ({ count, rating = null, total = null, onRating, readOnly = false, hideIfNotRated = false }) => {
   const [hoverRating, setHoverRating] = useState(0);
 
   const isFilled = useCallback(
@@ -51,10 +53,12 @@ const StarRating: React.FC<{ count: number; rating?: number; onRating?: (id: num
       );
   }, [count, isFilled, onRating, readOnly]);
 
+  if (rating === null && readOnly && hideIfNotRated) return <div></div>;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
       {starRating}
-      {rating === null && readOnly ? (
+      {readOnly ? (
         <p
           style={{
             fontWeight: 300,
@@ -64,7 +68,7 @@ const StarRating: React.FC<{ count: number; rating?: number; onRating?: (id: num
             paddingTop: '1px',
           }}
         >
-          Not rated
+          {rating === null || total === null ? 'Not rated' : `(${total})`}
         </p>
       ) : null}
     </div>

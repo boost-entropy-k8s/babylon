@@ -42,10 +42,13 @@ export function getIsDisabled(catalogItem: CatalogItem): boolean {
   return false;
 }
 
-export function getRate(catalogItem: CatalogItem): number | null {
-  if (catalogItem.metadata.labels?.[`${BABYLON_DOMAIN}/rate`]) {
-    const rate = parseInt(catalogItem.metadata.labels[`${BABYLON_DOMAIN}/rate`], 10);
-    return isNaN(rate) ? null : rate;
+export function getRating(catalogItem: CatalogItem): { ratingScore: number; totalRatings: number } | null {
+  const ratingScoreSelector = catalogItem.metadata.labels?.[`${BABYLON_DOMAIN}/rating`];
+  const totalRatingsSelector = catalogItem.metadata.annotations[`${BABYLON_DOMAIN}/totalRatings`];
+  if (ratingScoreSelector) {
+    const ratingScore = parseInt(ratingScoreSelector, 10);
+    const totalRatings = totalRatingsSelector ? parseInt(totalRatingsSelector, 10) : null;
+    return isNaN(ratingScore) ? null : { ratingScore, totalRatings };
   }
   return null;
 }
@@ -114,5 +117,5 @@ export function setLastFilter(filter: string): void {
 export function formatString(string: string): string {
   return (string.charAt(0).toUpperCase() + string.slice(1)).replace(/_/g, ' ');
 }
-export const HIDDEN_LABELS = ['disabled', 'userCatalogItem', 'stage', 'Featured_Score'];
+export const HIDDEN_LABELS = ['disabled', 'userCatalogItem', 'stage', 'Featured_Score', 'rating'];
 export const HIDDEN_ANNOTATIONS = ['ops', 'displayNameComponent0', 'displayNameComponent1'];
