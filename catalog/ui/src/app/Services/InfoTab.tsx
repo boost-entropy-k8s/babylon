@@ -45,7 +45,7 @@ const InfoTab: React.FC<{
   const autoStopTime = getAutoStopTime(resourceClaim);
   const provision_vars = Object.assign(
     {},
-    ...resourceClaim.status?.resources.flatMap((resource) => ({
+    ...(resourceClaim.status?.resources || []).flatMap((resource) => ({
       [resource.name]: resource.state?.spec.vars?.provision_data
         ? { ...resource.state.spec.vars?.provision_data }
         : null,
@@ -85,6 +85,7 @@ const InfoTab: React.FC<{
                 className="services-item__schedule-btn"
                 time={autoStopTime}
                 variant="extended"
+                resourceClaim={resourceClaim}
               />
             </DescriptionListDescription>
           </DescriptionListGroup>
@@ -102,6 +103,7 @@ const InfoTab: React.FC<{
                     className="services-item__schedule-btn"
                     time={resourceClaim.status?.lifespan?.end}
                     variant="extended"
+                    resourceClaim={resourceClaim}
                   >
                     {resourceClaim.spec?.lifespan?.end &&
                     resourceClaim.spec.lifespan.end != resourceClaim.status.lifespan.end ? (
