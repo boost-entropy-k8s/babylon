@@ -7,7 +7,7 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "prebuild": "npm run clean",
+    "prebuild": "if test \"$KEEP_ASSETS\" != \"true\" ; then npm run clean ; fi ",
     "dr:surge": "node dr-surge.js",
     "build": "webpack --config webpack.prod.js && npm run dr:surge",
     "start": "sirv dist --cors --single --host --port 8080",
@@ -52,7 +52,7 @@
     "file-loader": "^6.2.0",
     "history": "^5.3.0",
     "html-webpack-plugin": "^5.5.0",
-    "jest": "^29.4.0",
+    "jest": "^29.4.1",
     "jest-environment-jsdom": "^29.4.1",
     "jest-fetch-mock": "^3.0.3",
     "mini-css-extract-plugin": "^2.7.2",
@@ -85,7 +85,7 @@
     "@patternfly/react-icons": "4.93.3",
     "@patternfly/react-styles": "4.92.3",
     "@patternfly/react-table": "4.112.6",
-    "@reduxjs/toolkit": "^1.9.1",
+    "@reduxjs/toolkit": "^1.9.2",
     "asciidoctor": "^2.2.6",
     "dompurify": "^2.4.3",
     "js-yaml": "^4.1.0",
@@ -97,8 +97,8 @@
     "react-error-boundary": "^3.1.4",
     "react-redux": "^8.0.5",
     "react-router-dom": "^6.8.0",
-    "redux": "^4.2.0",
+    "redux": "^4.2.1",
     "reselect": "^4.1.7",
-    "swr": "^2.0.2"
+    "swr": "^2.0.3"
   }
 }
