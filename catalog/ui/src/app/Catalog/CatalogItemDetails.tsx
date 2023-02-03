@@ -95,10 +95,24 @@ const CatalogItemDetails: React.FC<{ catalogItem: CatalogItem; onClose: () => vo
 
   const services: ResourceClaim[] = useMemo(
     () =>
-      [].concat(
-        ...userResourceClaims.filter((rc) => !rc.metadata.labels?.['babylon.gpte.redhat.com/workshop-provision'])
-      ) || [],
+      Array.isArray(userResourceClaims)
+        ? [].concat(
+            ...userResourceClaims.filter((rc) => !rc.metadata.labels?.['babylon.gpte.redhat.com/workshop-provision'])
+          )
+        : [],
     [userResourceClaims]
+  );
+
+  const descriptionHtml = useMemo(
+    () => (
+      <div
+        className="catalog-item-details__description"
+        dangerouslySetInnerHTML={{
+          __html: description ? renderContent(description, { format: descriptionFormat }) : 'No description available.',
+        }}
+      />
+    ),
+    [description, descriptionFormat]
   );
 
   const isDisabled = getIsDisabled(catalogItem);
@@ -320,14 +334,7 @@ const CatalogItemDetails: React.FC<{ catalogItem: CatalogItem; onClose: () => vo
           </SidebarPanel>
           <SidebarContent>
             <p className="catalog-item-details__description-label">Description</p>
-            <div
-              className="catalog-item-details__description"
-              dangerouslySetInnerHTML={{
-                __html: description
-                  ? renderContent(description, { format: descriptionFormat })
-                  : 'No description available.',
-              }}
-            />
+            {{ descriptionHtml }}
           </SidebarContent>
         </Sidebar>
       </DrawerContentBody>
