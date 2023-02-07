@@ -1,4 +1,5 @@
-import React, { Suspense, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import Fuse from 'fuse.js';
 import { useNavigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import {
   Backdrop,
@@ -57,56 +58,6 @@ import CatalogNamespaceSelect from './CatalogNamespaceSelect';
 import CatalogItemListItem from './CatalogItemListItem';
 
 import './catalog.css';
-
-function compareCatalogItems(a: CatalogItem, b: CatalogItem, method: 'Featured' | 'AZ' | 'ZA' = 'AZ'): number {
-  const aDisplayName = displayName(a);
-  const bDisplayName = displayName(b);
-  if (aDisplayName !== bDisplayName) {
-    if (method === 'AZ') {
-      return aDisplayName < bDisplayName ? -1 : 1;
-    } else if (method === 'ZA') {
-      return aDisplayName < bDisplayName ? 1 : -1;
-    } else {
-      // method === 'Featured'
-      const aRating = a.metadata.labels[`${BABYLON_DOMAIN}/Featured_Score`];
-      const bRating = b.metadata.labels[`${BABYLON_DOMAIN}/Featured_Score`];
-      if (aRating || bRating) {
-        if (aRating && bRating) return parseInt(aRating, 10) < parseInt(bRating, 10) ? 1 : -1;
-        if (bRating) return 1;
-        return -1;
-      }
-      return aDisplayName < bDisplayName ? -1 : 1;
-    }
-  }
-  const aStage = a.metadata.labels?.[`${BABYLON_DOMAIN}/stage`];
-  const bStage = b.metadata.labels?.[`${BABYLON_DOMAIN}/stage`];
-  if (aStage !== bStage) {
-    return aStage === 'prod' && bStage !== 'prod'
-      ? -1
-      : aStage !== 'prod' && bStage === 'prod'
-      ? 1
-      : aStage === 'event' && bStage !== 'event'
-      ? -1
-      : aStage !== 'event' && bStage === 'event'
-      ? 1
-      : aStage === 'test' && bStage !== 'test'
-      ? -1
-      : aStage !== 'test' && bStage === 'test'
-      ? 1
-      : aStage === 'dev' && bStage !== 'dev'
-      ? -1
-      : aStage !== 'dev' && bStage === 'dev'
-      ? 1
-      : 0;
-  }
-  if (a.metadata.namespace != b.metadata.namespace) {
-    return a.metadata.namespace < b.metadata.namespace ? -1 : 1;
-  }
-  if (a.metadata.name != b.metadata.name) {
-    return a.metadata.name < b.metadata.name ? -1 : 1;
-  }
-  return 0;
-}
 
 function handleExportCsv(catalogItems: CatalogItem[]) {
   const annotations = [];
@@ -176,49 +127,12 @@ function handleExportCsv(catalogItems: CatalogItem[]) {
   asyncParser.input.push(null);
 }
 
-function filterCatalogItemByAccessControl(catalogItem: CatalogItem, userGroups: string[]): boolean {
+function filterCatalogItemByAccessControl(catalogItem: CatalogItem, userGroups: string[]) {
   return 'deny' !== checkAccessControl(catalogItem.spec.accessControl, userGroups);
 }
 
-function filterCatalogItemByCategory(catalogItem: CatalogItem, selectedCategory: string): boolean {
+function filterCatalogItemByCategory(catalogItem: CatalogItem, selectedCategory: string) {
   return selectedCategory === getCategory(catalogItem);
-}
-
-function filterCatalogItemByKeywords(catalogItem: CatalogItem, keywordFilter: string[]): boolean {
-  const ciCategory = getCategory(catalogItem);
-  const ciDescription = catalogItem.metadata.annotations?.[`${BABYLON_DOMAIN}/description`];
-
-  for (const keyword of keywordFilter) {
-    const keywordLower = keyword.toLowerCase();
-
-    let keywordMatch = null;
-
-    if (
-      catalogItem.metadata.name.toLowerCase().includes(keywordLower) ||
-      displayName(catalogItem).toLowerCase().includes(keywordLower) ||
-      (ciCategory && ciCategory.toLowerCase().includes(keywordLower)) ||
-      (ciDescription && ciDescription.toLowerCase().includes(keywordLower))
-    ) {
-      keywordMatch = true;
-    }
-
-    if (!keywordMatch && catalogItem.metadata.labels) {
-      for (const label in catalogItem.metadata.labels) {
-        if (
-          label.startsWith(`${BABYLON_DOMAIN}/`) &&
-          catalogItem.metadata.labels[label].toLowerCase().includes(keywordLower)
-        ) {
-          keywordMatch = true;
-          break;
-        }
-      }
-    }
-
-    if (!keywordMatch) {
-      return false;
-    }
-  }
-  return true;
 }
 
 function filterCatalogItemByLabels(catalogItem: CatalogItem, labelFilter: { [attr: string]: string[] }): boolean {
@@ -277,7 +191,7 @@ const Catalog: React.FC = () => {
   const { namespace: catalogNamespaceName } = useParams();
   const { catalogNamespaces, groups, isAdmin } = useSession().getSession();
   const [view, setView] = useState<'gallery' | 'list'>('gallery');
-  const [sortBy, setSortBy] = useState<{ isOpen: boolean; selected: 'Featured' | 'AZ' | 'ZA' }>({
+  const [sortBy, setSortBy] = useState<{ isOpen: boolean; selected: 'Featured' | 'Rating' | 'AZ' | 'ZA' }>({
     isOpen: false,
     selected: 'Featured',
   });
@@ -292,13 +206,7 @@ const Catalog: React.FC = () => {
       ? openCatalogItemParam.split('/')[1]
       : openCatalogItemParam
     : null;
-  const keywordFilter = searchParams.has('search')
-    ? searchParams
-        .get('search')
-        .trim()
-        .split(/ +/)
-        .filter((w) => w != '')
-    : null;
+  const keywordFilter = searchParams.has('search') ? searchParams.get('search').trim() : null;
   const selectedCategory = searchParams.has('category') ? searchParams.get('category') : null;
   const selectedLabels: { [label: string]: string[] } = searchParams.has('labels')
     ? JSON.parse(searchParams.get('labels'))
@@ -310,6 +218,60 @@ const Catalog: React.FC = () => {
     groups.some((g) => g.startsWith('identity-provider')) &&
     groups.some((g) => g.startsWith('email-domain'));
 
+  const compareCatalogItems = useCallback(
+    (a: CatalogItem, b: CatalogItem): number => {
+      const aDisplayName = displayName(a);
+      const bDisplayName = displayName(b);
+      if (aDisplayName !== bDisplayName) {
+        if (sortBy.selected === 'AZ') {
+          return aDisplayName < bDisplayName ? -1 : 1;
+        } else if (sortBy.selected === 'ZA') {
+          return aDisplayName < bDisplayName ? 1 : -1;
+        } else {
+          // sortBy === 'Featured' and 'Rating'
+          const aRating =
+            a.metadata.labels[`${BABYLON_DOMAIN}/${sortBy.selected === 'Featured' ? 'Featured_Score' : 'rating'}`];
+          const bRating =
+            b.metadata.labels[`${BABYLON_DOMAIN}/${sortBy.selected === 'Featured' ? 'Featured_Score' : 'rating'}`];
+          if (aRating || bRating) {
+            if (aRating && bRating) return parseInt(aRating, 10) < parseInt(bRating, 10) ? 1 : -1;
+            if (bRating) return 1;
+            return -1;
+          }
+          return aDisplayName < bDisplayName ? -1 : 1;
+        }
+      }
+      const aStage = a.metadata.labels?.[`${BABYLON_DOMAIN}/stage`];
+      const bStage = b.metadata.labels?.[`${BABYLON_DOMAIN}/stage`];
+      if (aStage !== bStage) {
+        return aStage === 'prod' && bStage !== 'prod'
+          ? -1
+          : aStage !== 'prod' && bStage === 'prod'
+          ? 1
+          : aStage === 'event' && bStage !== 'event'
+          ? -1
+          : aStage !== 'event' && bStage === 'event'
+          ? 1
+          : aStage === 'test' && bStage !== 'test'
+          ? -1
+          : aStage !== 'test' && bStage === 'test'
+          ? 1
+          : aStage === 'dev' && bStage !== 'dev'
+          ? -1
+          : aStage !== 'dev' && bStage === 'dev'
+          ? 1
+          : 0;
+      }
+      if (a.metadata.namespace != b.metadata.namespace) {
+        return a.metadata.namespace < b.metadata.namespace ? -1 : 1;
+      }
+      if (a.metadata.name != b.metadata.name) {
+        return a.metadata.name < b.metadata.name ? -1 : 1;
+      }
+      return 0;
+    },
+    [sortBy.selected]
+  );
   useEffect(() => {
     if (!requiredUserPropertiesToAccess) {
       const count = searchParams.has('c') ? parseInt(searchParams.get('c'), 10) + 1 : 1;
@@ -322,19 +284,6 @@ const Catalog: React.FC = () => {
       }, 10000);
     }
   }, [requiredUserPropertiesToAccess, searchParams]);
-  const filterFunction = useMemo(() => (item: CatalogItem) => filterCatalogItemByAccessControl(item, groups), [groups]);
-
-  const { data: catalogItemsArr } = useSWRImmutable<CatalogItem[]>(
-    apiPaths.CATALOG_ITEMS({ namespace: catalogNamespaceName ? catalogNamespaceName : 'all-catalogs' }),
-    () => fetchCatalog(catalogNamespaceName ? [catalogNamespaceName] : catalogNamespaceNames)
-  );
-
-  // Filter & Sort catalog items
-  const catalogItems = useMemo(
-    () => catalogItemsArr.filter(filterFunction).sort((a, b) => compareCatalogItems(a, b, sortBy.selected)),
-    [catalogItemsArr, filterFunction, sortBy.selected]
-  );
-
   // Load last filter
   useEffect(() => {
     const lastCatalogQuery = getLastFilter();
@@ -343,15 +292,62 @@ const Catalog: React.FC = () => {
     }
   }, [searchParams, setSearchParams]);
 
-  const categoryFilteredCatalogItems = selectedCategory
-    ? catalogItems.filter((catalogItem) => filterCatalogItemByCategory(catalogItem, selectedCategory))
-    : catalogItems;
-  const searchFilteredCatalogItems = keywordFilter
-    ? categoryFilteredCatalogItems.filter((catalogItem) => filterCatalogItemByKeywords(catalogItem, keywordFilter))
-    : categoryFilteredCatalogItems;
-  const labelFilteredCatalogItems = selectedLabels
-    ? searchFilteredCatalogItems.filter((catalogItem) => filterCatalogItemByLabels(catalogItem, selectedLabels))
-    : searchFilteredCatalogItems;
+  const { data: catalogItemsArr } = useSWRImmutable<CatalogItem[]>(
+    apiPaths.CATALOG_ITEMS({ namespace: catalogNamespaceName ? catalogNamespaceName : 'all-catalogs' }),
+    () => fetchCatalog(catalogNamespaceName ? [catalogNamespaceName] : catalogNamespaceNames)
+  );
+
+  const catalogItems = useMemo(
+    () => catalogItemsArr.filter((ci) => filterCatalogItemByAccessControl(ci, groups)),
+    [catalogItemsArr, groups]
+  );
+
+  // Filter & Sort catalog items
+  const [_catalogItems, _catalogItemsCpy] = useMemo(() => {
+    const catalogItemsCpy = [...catalogItems].sort(compareCatalogItems);
+    const options = {
+      keys: [
+        {
+          name: ['metadata', 'annotations', 'babylon.gpte.redhat.com/displayName'],
+          weight: 10,
+        },
+        {
+          name: ['metadata', 'annotations', 'babylon.gpte.redhat.com/keywords'],
+          weight: 5,
+        },
+        {
+          name: ['metadata', 'labels', 'babylon.gpte.redhat.com/Sales_Play'],
+          weight: 5,
+        },
+        {
+          name: ['metadata', 'labels', 'babylon.gpte.redhat.com/Provider'],
+          weight: 2.5,
+        },
+        {
+          name: ['metadata', 'labels', 'babylon.gpte.redhat.com/Product'],
+          weight: 1,
+        },
+        {
+          name: ['metadata', 'annotations', 'babylon.gpte.redhat.com/description'],
+          weight: 1,
+        },
+        {
+          name: ['metadata', 'labels', 'babylon.gpte.redhat.com/Product_Family'],
+          weight: 0.5,
+        },
+      ],
+    };
+    const catalogItemsFuse = new Fuse(catalogItemsCpy, options);
+    if (selectedCategory) {
+      catalogItemsFuse.remove((ci) => !filterCatalogItemByCategory(ci, selectedCategory));
+    }
+    if (selectedLabels) {
+      catalogItemsFuse.remove((ci) => !filterCatalogItemByLabels(ci, selectedLabels));
+    }
+    return [catalogItemsFuse, catalogItemsCpy];
+  }, [catalogItems, selectedCategory, selectedLabels, compareCatalogItems]);
+
+  const catalogItemsResult = keywordFilter ? _catalogItems.search(keywordFilter).map((x) => x.item) : _catalogItemsCpy;
 
   const openCatalogItem =
     openCatalogItemName && openCatalogItemNamespaceName
@@ -361,14 +357,14 @@ const Catalog: React.FC = () => {
         )
       : null;
 
-  function closeCatalogItem(): void {
+  function closeCatalogItem() {
     searchParams.delete('item');
     setSearchParams(searchParams);
   }
 
-  function onKeywordSearchChange(value: string[]): void {
+  function onKeywordSearchChange(value: string) {
     if (value) {
-      searchParams.set('search', value.join(' '));
+      searchParams.set('search', value);
     } else if (searchParams.has('search')) {
       searchParams.delete('search');
     }
@@ -376,7 +372,7 @@ const Catalog: React.FC = () => {
     setSearchParams(searchParams);
   }
 
-  function onSelectCatalogNamespace(namespaceName: string | null): void {
+  function onSelectCatalogNamespace(namespaceName: string) {
     if (namespaceName) {
       navigate(`/catalog/${namespaceName}${location.search}`);
     } else {
@@ -384,7 +380,7 @@ const Catalog: React.FC = () => {
     }
   }
 
-  function onSelectCategory(category: string | null): void {
+  function onSelectCategory(category: string) {
     if (category) {
       searchParams.set('category', category);
     } else if (searchParams.has('category')) {
@@ -394,7 +390,7 @@ const Catalog: React.FC = () => {
     setSearchParams(searchParams);
   }
 
-  function onSelectLabels(labels: { [label: string]: string[] } | null): void {
+  function onSelectLabels(labels: { [label: string]: string[] }) {
     if (labels) {
       searchParams.set('labels', JSON.stringify(labels));
     } else if (searchParams.has('labels')) {
@@ -414,7 +410,7 @@ const Catalog: React.FC = () => {
     return keywordFilter
       ? keywordFilter
       : lastCatalogQuery && new URLSearchParams(lastCatalogQuery).has('search')
-      ? [new URLSearchParams(lastCatalogQuery).get('search')]
+      ? new URLSearchParams(lastCatalogQuery).get('search')
       : null;
   };
 
@@ -457,7 +453,7 @@ const Catalog: React.FC = () => {
                     />
                     <CatalogLabelSelector
                       catalogItems={catalogItems}
-                      filteredCatalogItems={searchFilteredCatalogItems}
+                      filteredCatalogItems={catalogItemsResult}
                       onSelect={onSelectLabels}
                       selected={selectedLabels}
                     />
@@ -531,7 +527,7 @@ const Catalog: React.FC = () => {
                                     onSelect={(_, selection) =>
                                       setSortBy({
                                         ...sortBy,
-                                        selected: selection as 'Featured' | 'AZ' | 'ZA',
+                                        selected: selection as 'Featured' | 'Rating' | 'AZ' | 'ZA',
                                         isOpen: false,
                                       })
                                     }
@@ -539,27 +535,28 @@ const Catalog: React.FC = () => {
                                     isOpen={sortBy.isOpen}
                                   >
                                     <SelectOption key={0} value="Featured" />
-                                    <SelectOption key={1} value="AZ" />
-                                    <SelectOption key={2} value="ZA" />
+                                    <SelectOption key={1} value="Rating" />
+                                    <SelectOption key={2} value="AZ" />
+                                    <SelectOption key={3} value="ZA" />
                                   </Select>
                                 </li>
                               </ul>
                             </StackItem>
                             <StackItem>
                               <p className="catalog__item-count">
-                                {labelFilteredCatalogItems.length} item{labelFilteredCatalogItems.length > 1 && 's'}
+                                {catalogItemsResult.length} item{catalogItemsResult.length > 1 && 's'}
                               </p>
                             </StackItem>
                           </Stack>
                         </SplitItem>
                       </Split>
                     </PageSection>
-                    {labelFilteredCatalogItems.length > 0 ? (
+                    {catalogItemsResult.length > 0 ? (
                       <PageSection
                         variant={PageSectionVariants.default}
                         className={`catalog__content-box catalog__content-box--${view}`}
                       >
-                        {labelFilteredCatalogItems.map((catalogItem) =>
+                        {catalogItemsResult.map((catalogItem) =>
                           view === 'gallery' ? (
                             <CatalogItemCard key={catalogItem.metadata.uid} catalogItem={catalogItem} />
                           ) : (
@@ -570,7 +567,7 @@ const Catalog: React.FC = () => {
                     ) : (
                       <PageSection variant={PageSectionVariants.default} className="catalog__content-box--empty">
                         <EmptyState variant="full">
-                          {catalogItems.length > 0 ? (
+                          {catalogItemsResult.length === 0 ? (
                             <p>
                               No catalog items match filters.{' '}
                               <Button
