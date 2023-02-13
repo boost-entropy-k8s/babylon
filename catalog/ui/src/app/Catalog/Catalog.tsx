@@ -1,4 +1,4 @@
-import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useCallback, useLayoutEffect, useMemo, useState } from 'react';
 import Fuse from 'fuse.js';
 import { useNavigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import {
@@ -223,6 +223,13 @@ const Catalog: React.FC<{ userHasRequiredPropertiesToAccess: boolean }> = ({ use
   const [searchInputStringCb, setSearchInputStringCb] = useState<(val: string) => void>(null);
   const assignSearchInputStringCb = (cb: (v: string) => void) => setSearchInputStringCb(cb);
   const catalogNamespaceNames = catalogNamespaces.map((ci) => ci.name);
+
+  // sync input with search param
+  useLayoutEffect(() => {
+    if (searchString && searchInputStringCb) {
+      searchInputStringCb(searchString);
+    }
+  }, [searchString, searchInputStringCb]);
 
   const compareCatalogItems = useCallback(
     (a: CatalogItem, b: CatalogItem): number => {
@@ -546,7 +553,24 @@ const Catalog: React.FC<{ userHasRequiredPropertiesToAccess: boolean }> = ({ use
                       ) : (
                         <PageSection variant={PageSectionVariants.default} className="catalog__content-box--empty">
                           <EmptyState variant="full">
-                            {catalogItemsResult.length === 0 ? (
+                            {!userHasRequiredPropertiesToAccess ? (
+                              <>
+                                <p>Welcome to the Red Hat Demo Platform!</p>
+                                <LoadingIcon />
+                                <p>
+                                  Please wait a few seconds while we set up your catalog. If nothing happens refresh
+                                  this page.
+                                </p>
+                              </>
+                            ) : groups.includes('salesforce-partner') ? (
+                              <>
+                                <p>Sorry! Red Hat Demo Platform is not yet available for partners.</p>
+                                <p>
+                                  Please continue to use <a href="https://labs.opentlc.com">labs.opentlc.com</a> for
+                                  labs or <a href="https://demo00.opentlc.com">demo00.opentlc.com</a> for demos.
+                                </p>
+                              </>
+                            ) : (
                               <p>
                                 No catalog items match filters.{' '}
                                 <Button
@@ -558,28 +582,6 @@ const Catalog: React.FC<{ userHasRequiredPropertiesToAccess: boolean }> = ({ use
                                 >
                                   Clear all filters
                                 </Button>
-                              </p>
-                            ) : groups.includes('salesforce-partner') ? (
-                              <p>
-                                Sorry! The new Red Hat Demo Platform (RHDP) is not yet available for partners. Please
-                                continue to use <a href="https://labs.opentlc.com">labs.opentlc.com</a> for labs or{' '}
-                                <a href="https://demo00.opentlc.com">demo00.opentlc.com</a> for demos.
-                              </p>
-                            ) : !userHasRequiredPropertiesToAccess ? (
-                              <>
-                                <p>Welcome to the Red Hat Demo Platform!</p>
-                                <LoadingIcon />
-                                <p>
-                                  Please wait a few seconds while we set up your catalog. If nothing happens refresh
-                                  this page.
-                                </p>
-                              </>
-                            ) : (
-                              <p>
-                                Sorry! You do not have access to the Red Hat Demo Platform. This system is only
-                                available for Red Hat associates at this time. Red Hat partners may access{' '}
-                                <a href="https://labs.opentlc.com">labs.opentlc.com</a> for labs or{' '}
-                                <a href="https://demo00.opentlc.com">demo00.opentlc.com</a> for demos.
                               </p>
                             )}
                           </EmptyState>

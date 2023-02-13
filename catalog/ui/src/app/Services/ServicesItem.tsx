@@ -108,21 +108,18 @@ const ComponentDetailsList: React.FC<{
   provisionMessages,
   provisionDataEntries,
 }) => {
+  const _provisionMessages =
+    typeof provisionMessages === 'string' ? provisionMessages : provisionMessages ? provisionMessages.join('\n') : null;
   const provisionMessagesHtml = useMemo(
     () =>
       provisionMessages ? (
         <div
           dangerouslySetInnerHTML={{
-            __html: renderContent(
-              (typeof provisionMessages === 'string' ? provisionMessages : provisionMessages.join('\n'))
-                .replace(/^\s+|\s+$/g, '')
-                .replace(/([^\n])\n(?!\n)/g, '$1 +\n'),
-              { format: 'asciidoc' }
-            ),
+            __html: renderContent(_provisionMessages, { format: 'htmlString' }),
           }}
         />
       ) : null,
-    [JSON.stringify(provisionMessages)]
+    [_provisionMessages]
   );
   return (
     <DescriptionList isHorizontal>
@@ -407,11 +404,7 @@ const ServicesItemComponent: React.FC<{
   const hasInfoMessageTemplate = !!getInfoMessageTemplate(resourceClaim);
 
   async function onModalAction(): Promise<void> {
-    if (modalState.action === 'delete') {
-      deleteResourceClaim(resourceClaim);
-      cache.delete(apiPaths.RESOURCE_CLAIM({ namespace: serviceNamespaceName, resourceClaimName }));
-      navigate(`/services/${serviceNamespaceName}`);
-    } else if (modalState.action === 'stop' || modalState.action === 'start') {
+    if (modalState.action === 'stop' || modalState.action === 'start') {
       const resourceClaimUpdate =
         modalState.action === 'start'
           ? await startAllResourcesInResourceClaim(resourceClaim)
@@ -428,6 +421,11 @@ const ServicesItemComponent: React.FC<{
           cache.delete(apiPaths.PROVISION_RATING({ provisionUuid }));
         }
       }
+    }
+    if (modalState.action === 'delete') {
+      deleteResourceClaim(resourceClaim);
+      cache.delete(apiPaths.RESOURCE_CLAIM({ namespace: serviceNamespaceName, resourceClaimName }));
+      navigate(`/services/${serviceNamespaceName}`);
     }
   }
 
