@@ -101,7 +101,7 @@ const CatalogItemFormData: React.FC<{ catalogItemName: string; catalogNamespaceN
       accessPassword: randomString(8),
       description: '',
       displayName: displayName(catalogItem),
-      provisionCount: catalogItem.spec.multiuser ? 1 : 5,
+      provisionCount: 1,
       provisionConcurrency: catalogItem.spec.multiuser ? 1 : 10,
       provisionStartDelay: 30,
     }),
@@ -309,7 +309,7 @@ const CatalogItemFormData: React.FC<{ catalogItemName: string; catalogNamespaceN
                       fontWeight: 400,
                     }}
                   >
-                    (Opportunity ID, Campaign ID, Partner Registration, or Project ID)
+                    (Opportunity ID, Campaign ID, CDH Party or Project ID)
                   </span>
                 </span>
               }
@@ -352,10 +352,10 @@ const CatalogItemFormData: React.FC<{ catalogItemName: string; catalogNamespaceN
                 />
                 <Tooltip
                   position="right"
-                  content={<div>Salesforce Opportunity ID, Campaign ID, Partner Registration, or Project ID.</div>}
+                  content={<div>Salesforce Opportunity ID, Campaign ID, CDH Party or Project ID.</div>}
                 >
                   <OutlinedQuestionCircleIcon
-                    aria-label="Salesforce Opportunity ID, Campaign ID, Partner Registration, or Project ID."
+                    aria-label="Salesforce Opportunity ID, Campaign ID, CDH Party or Project ID."
                     className="tooltip-icon-only"
                   />
                 </Tooltip>
@@ -462,7 +462,25 @@ const CatalogItemFormData: React.FC<{ catalogItemName: string; catalogNamespaceN
               <Switch
                 id="workshop-switch"
                 aria-label="Enable workshop user interface"
-                label="Enable workshop user interface"
+                label={
+                  <span style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+                    Enable workshop user interface{' '}
+                    <span
+                      style={{
+                        backgroundColor: '#faeae8',
+                        borderRadius: '10px',
+                        color: '#7d1007',
+                        fontStyle: 'italic',
+                        fontWeight: 300,
+                        fontSize: '12px',
+                        padding: '0 8px',
+                        marginLeft: '8px',
+                      }}
+                    >
+                      Beta
+                    </span>
+                  </span>
+                }
                 isChecked={!!formState.workshop}
                 hasCheckIcon
                 onChange={(isChecked) =>
