@@ -47,7 +47,7 @@
     "css-loader": "^6.7.3",
     "css-minimizer-webpack-plugin": "^4.2.2",
     "dotenv-webpack": "^8.0.1",
-    "eslint": "^8.34.0",
+    "eslint": "^8.35.0",
     "eslint-plugin-react": "^7.32.2",
     "eslint-plugin-react-hooks": "^4.6.0",
     "file-loader": "^6.2.0",
@@ -103,6 +103,6 @@
     "react-window": "^1.8.8",
     "redux": "^4.2.1",
     "reselect": "^4.1.7",
-    "swr": "^2.0.3"
+    "swr": "^2.0.4"
   }
 }
