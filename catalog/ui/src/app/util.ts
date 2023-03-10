@@ -6,6 +6,7 @@ import {
   CatalogNamespace,
   CostTracker,
   K8sObject,
+  Namespace,
   Nullable,
   ResourceClaim,
   Service,
@@ -217,7 +218,7 @@ export function getStageFromK8sObject(k8sObject: K8sObject): 'dev' | 'test' | 'e
   if (!k8sObject) return null;
   const nameSplitted = k8sObject.metadata.name.split('.');
   if (Array.isArray(nameSplitted) && nameSplitted.length > 0) {
-    const stage = nameSplitted.at(-1);
+    const stage = nameSplitted[nameSplitted.length - 1];
     const validStages = ['dev', 'test', 'event', 'prod'];
     if (validStages.includes(stage)) {
       return stage as 'dev' | 'test' | 'event' | 'prod';
@@ -369,4 +370,12 @@ export function getHelpUrl(userEmail: string) {
     return 'https://red.ht/demo-help';
   }
   return 'https://red.ht/open-support';
+}
+
+export function namespaceToServiceNamespaceMapper(ns: Namespace): ServiceNamespace {
+  return {
+    name: ns.metadata.name,
+    displayName: ns.metadata.annotations['openshift.io/display-name'] || ns.metadata.name,
+    requester: ns.metadata.annotations['openshift.io/requester'],
+  };
 }
