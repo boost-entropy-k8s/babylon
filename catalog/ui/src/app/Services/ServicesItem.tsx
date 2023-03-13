@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { ErrorBoundary, useErrorHandler } from 'react-error-boundary';
+import { useErrorHandler } from 'react-error-boundary';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import yaml from 'js-yaml';
@@ -66,7 +66,6 @@ import {
 import useSession from '@app/utils/useSession';
 import Modal, { useModal } from '@app/Modal/Modal';
 import CurrencyAmount from '@app/components/CurrencyAmount';
-import Footer from '@app/components/Footer';
 import ConditionalWrapper from '@app/components/ConditionalWrapper';
 import LabInterfaceLink from '@app/components/LabInterfaceLink';
 import LocalTimestamp from '@app/components/LocalTimestamp';
@@ -76,7 +75,6 @@ import WorkshopsItemDetails from '@app/Workshops/WorkshopsItemDetails';
 import WorkshopsItemUserAssignments from '@app/Workshops/WorkshopsItemUserAssignments';
 import AutoStopDestroy from '@app/components/AutoStopDestroy';
 import Label from '@app/components/Label';
-import NotFoundComponent from '@app/components/NotFound';
 import { getAutoStopTime, getInfoMessageTemplate, getMostRelevantResourceAndTemplate } from './service-utils';
 import ServicesAction from './ServicesAction';
 import ServiceActions from './ServiceActions';
@@ -88,6 +86,7 @@ import ServiceUsers from './ServiceUsers';
 import ServiceStatus from './ServiceStatus';
 import ServiceItemStatus from './ServiceItemStatus';
 import InfoTab from './InfoTab';
+import ErrorBoundaryPage from '@app/components/ErrorBoundaryPage';
 
 import './services-item.css';
 
@@ -347,7 +346,6 @@ const ServicesItemComponent: React.FC<{
     displayName: serviceNamespaceName,
   };
   const workshopName = resourceClaim.metadata?.labels?.[`${BABYLON_DOMAIN}/workshop`];
-  const workshopProvisionName = resourceClaim.metadata?.labels?.[`${BABYLON_DOMAIN}/workshop-provision`];
   const externalPlatformUrl = resourceClaim.metadata?.annotations?.[`${BABYLON_DOMAIN}/internalPlatformUrl`];
   const isPartOfWorkshop = isResourceClaimPartOfWorkshop(resourceClaim);
   const resourcesK8sObj = (resourceClaim.status?.resources || []).map((r: { state?: K8sObject }) => r.state);
@@ -591,6 +589,14 @@ const ServicesItemComponent: React.FC<{
             <Title headingLevel="h4" size="xl" style={{ display: 'flex', alignItems: 'center' }}>
               {displayName(resourceClaim)}
               {stage !== 'prod' ? <Label>{stage}</Label> : null}
+              {workshopName ? (
+                <Label
+                  key="service-item__workshop-ui"
+                  tooltipDescription={<div>Workshop user interface is enabled</div>}
+                >
+                  Workshop UI
+                </Label>
+              ) : null}
             </Title>
           </SplitItem>
           <SplitItem>
@@ -881,7 +887,7 @@ const ServicesItemComponent: React.FC<{
                 {activeTab === 'console' ? <ServiceOpenStackConsole resourceClaim={resourceClaim} /> : null}
               </Tab>
             ) : null}
-            {workshopName && !workshopProvisionName ? (
+            {workshopName && !isPartOfWorkshop ? (
               [
                 <Tab eventKey="workshop" key="workshop" title={<TabTitleText>Workshop</TabTitleText>}>
                   {activeTab === 'workshop' ? (
@@ -943,22 +949,13 @@ const ServicesItem: React.FC<{
   resourceClaimName: string;
   serviceNamespaceName: string;
 }> = ({ activeTab, resourceClaimName, serviceNamespaceName }) => (
-  <ErrorBoundary
-    onError={(err) => window['newrelic'] && window['newrelic'].noticeError(err)}
-    fallbackRender={() => (
-      <>
-        <NotFoundComponent name={resourceClaimName} namespace={serviceNamespaceName} type="Service" />
-        <Footer />
-      </>
-    )}
-  >
+  <ErrorBoundaryPage namespace={serviceNamespaceName} name={resourceClaimName} type="Service">
     <ServicesItemComponent
       activeTab={activeTab}
       resourceClaimName={resourceClaimName}
       serviceNamespaceName={serviceNamespaceName}
     />
-    <Footer />
-  </ErrorBoundary>
+  </ErrorBoundaryPage>
 );
 
 export default ServicesItem;

@@ -22,7 +22,6 @@ import Editor from '@monaco-editor/react';
 import yaml from 'js-yaml';
 import { apiPaths, deleteResourceHandle, fetcher } from '@app/api';
 import { BABYLON_DOMAIN, compareK8sObjects } from '@app/util';
-import { selectConsoleURL } from '@app/store';
 import { ResourceClaim, ResourceHandle } from '@app/types';
 import { ActionDropdown, ActionDropdownItem } from '@app/components/ActionDropdown';
 import LocalTimestamp from '@app/components/LocalTimestamp';
@@ -31,9 +30,8 @@ import TimeInterval from '@app/components/TimeInterval';
 import CreateResourcePoolFromResourceHandleModal from './CreateResourcePoolFromResourceHandleModal';
 import Modal, { useModal } from '@app/Modal/Modal';
 import useSWR from 'swr';
-import { ErrorBoundary, useErrorHandler } from 'react-error-boundary';
-import Footer from '@app/components/Footer';
-import NotFoundComponent from '@app/components/NotFound';
+import { useErrorHandler } from 'react-error-boundary';
+import ErrorBoundaryPage from '@app/components/ErrorBoundaryPage';
 import useSession from '@app/utils/useSession';
 
 import './admin.css';
@@ -356,18 +354,9 @@ const ResourceHandleInstanceComponent: React.FC<{ resourceHandleName: string; ac
 const ResourceHandleInstance: React.FC = () => {
   const { name: resourceHandleName, tab: activeTab = 'details' } = useParams();
   return (
-    <ErrorBoundary
-      fallbackRender={() => (
-        <>
-          <NotFoundComponent name={resourceHandleName} type="ResourceHandle" />
-          <Footer />
-        </>
-      )}
-      onError={(err) => window['newrelic'] && window['newrelic'].noticeError(err)}
-    >
+    <ErrorBoundaryPage name={resourceHandleName} type="ResourceHandle">
       <ResourceHandleInstanceComponent activeTab={activeTab} resourceHandleName={resourceHandleName} />
-      <Footer />
-    </ErrorBoundary>
+    </ErrorBoundaryPage>
   );
 };
 

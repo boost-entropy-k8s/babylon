@@ -21,16 +21,15 @@ import Editor from '@monaco-editor/react';
 import yaml from 'js-yaml';
 import { apiPaths, deleteAnarchyAction, fetcher } from '@app/api';
 import { selectedUidsReducer } from '@app/reducers';
-import { AnarchyAction, AnarchyRun, AnarchyRunList } from '@app/types';
+import { AnarchyAction, AnarchyRunList } from '@app/types';
 import { ActionDropdown, ActionDropdownItem } from '@app/components/ActionDropdown';
 import LocalTimestamp from '@app/components/LocalTimestamp';
 import OpenshiftConsoleLink from '@app/components/OpenshiftConsoleLink';
 import TimeInterval from '@app/components/TimeInterval';
 import AnarchyRunsTable from './AnarchyRunsTable';
-import Footer from '@app/components/Footer';
 import useSession from '@app/utils/useSession';
-import { ErrorBoundary, useErrorHandler } from 'react-error-boundary';
-import NotFoundComponent from '@app/components/NotFound';
+import { useErrorHandler } from 'react-error-boundary';
+import ErrorBoundaryPage from '@app/components/ErrorBoundaryPage';
 import { compareK8sObjects, compareK8sObjectsArr } from '@app/util';
 import useMatchMutate from '@app/utils/useMatchMutate';
 
@@ -237,22 +236,13 @@ const AnarchyActionInstanceComponent: React.FC<{ anarchyActionName: string; name
 const AnarchyActionInstance: React.FC = () => {
   const { name: anarchyActionName, namespace, tab: activeTab = 'details' } = useParams();
   return (
-    <ErrorBoundary
-      fallbackRender={() => (
-        <>
-          <NotFoundComponent name={anarchyActionName} type="AnarchyAction" namespace={namespace} />
-          <Footer />
-        </>
-      )}
-      onError={(err) => window['newrelic'] && window['newrelic'].noticeError(err)}
-    >
+    <ErrorBoundaryPage namespace={namespace} name={anarchyActionName} type="AnarchyAction">
       <AnarchyActionInstanceComponent
         activeTab={activeTab}
         anarchyActionName={anarchyActionName}
         namespace={namespace}
       />
-      <Footer />
-    </ErrorBoundary>
+    </ErrorBoundaryPage>
   );
 };
 

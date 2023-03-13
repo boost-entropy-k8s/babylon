@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useReducer } from 'react';
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import useSWRInfinite from 'swr/infinite';
 import {
   EmptyState,
@@ -22,9 +22,9 @@ import OpenshiftConsoleLink from '@app/components/OpenshiftConsoleLink';
 import SelectableTable from '@app/components/SelectableTable';
 import TimeInterval from '@app/components/TimeInterval';
 import AnarchyActionSelect from './AnarchyActionSelect';
-import AnarchyNamespaceSelect from './AnarchyNamespaceSelect';
 import Footer from '@app/components/Footer';
 import { compareK8sObjectsArr } from '@app/util';
+import ProjectSelector from '@app/components/ProjectSelector';
 
 import './admin.css';
 
@@ -45,15 +45,19 @@ const AnarchyActions: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { namespace } = useParams();
-  const urlSearchParams = new URLSearchParams(location.search);
-  const keywordFilter = urlSearchParams.has('search')
-    ? urlSearchParams
-        .get('search')
-        .trim()
-        .split(/ +/)
-        .filter((w) => w != '')
-    : null;
-  const actionFilter = urlSearchParams.has('action') ? urlSearchParams.get('action') : null;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const keywordFilter = useMemo(
+    () =>
+      searchParams.has('search')
+        ? searchParams
+            .get('search')
+            .trim()
+            .split(/ +/)
+            .filter((w) => w != '')
+        : null,
+    [searchParams.get('search')]
+  );
+  const actionFilter = searchParams.has('action') ? searchParams.get('action') : null;
   const [selectedUids, reduceSelectedUids] = useReducer(selectedUidsReducer, []);
   const labelSelector = actionFilter ? `anarchy.gpte.redhat.com/action=${actionFilter}` : null;
 
@@ -172,11 +176,11 @@ const AnarchyActions: React.FC = () => {
               initialValue={keywordFilter}
               onSearch={(value) => {
                 if (value) {
-                  urlSearchParams.set('search', value.join(' '));
-                } else if (urlSearchParams.has('search')) {
-                  urlSearchParams.delete('search');
+                  searchParams.set('search', value.join(' '));
+                } else if (searchParams.has('search')) {
+                  searchParams.delete('search');
                 }
-                navigate(`${location.pathname}?${urlSearchParams.toString()}`);
+                setSearchParams(searchParams);
               }}
             />
           </SplitItem>
@@ -185,17 +189,18 @@ const AnarchyActions: React.FC = () => {
               action={actionFilter}
               onSelect={(action) => {
                 if (action) {
-                  urlSearchParams.set('action', action);
-                } else if (urlSearchParams.has('action')) {
-                  urlSearchParams.delete('action');
+                  searchParams.set('action', action);
+                } else if (searchParams.has('action')) {
+                  searchParams.delete('action');
                 }
-                navigate(`${location.pathname}?${urlSearchParams.toString()}`);
+                setSearchParams(searchParams);
               }}
             />
           </SplitItem>
           <SplitItem>
-            <AnarchyNamespaceSelect
-              namespace={namespace}
+            <ProjectSelector
+              selector="anarchy"
+              currentNamespaceName={namespace}
               onSelect={(namespaceName) => {
                 if (namespaceName) {
                   navigate(`/admin/anarchyactions/${namespaceName}${location.search}`);

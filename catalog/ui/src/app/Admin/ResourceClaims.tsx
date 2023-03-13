@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { Link, useNavigate, useLocation, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useSWRConfig } from 'swr';
 import useSWRInfinite from 'swr/infinite';
 import {
@@ -35,6 +35,7 @@ import {
   getCostTracker,
   FETCH_BATCH_LIMIT,
   compareK8sObjectsArr,
+  isResourceClaimPartOfWorkshop,
 } from '@app/util';
 import SelectableTable from '@app/components/SelectableTable';
 import Modal, { useModal } from '@app/Modal/Modal';
@@ -70,16 +71,19 @@ function keywordMatch(r: ResourceClaim, keyword: string): boolean {
 const ResourceClaims: React.FC<{}> = () => {
   const navigate = useNavigate();
   const { namespace } = useParams();
-  const location = useLocation();
-  const urlSearchParams = new URLSearchParams(location.search);
+  const [searchParams, setSearchParams] = useSearchParams();
   const { cache } = useSWRConfig();
-  const keywordFilter = urlSearchParams.has('search')
-    ? urlSearchParams
-        .get('search')
-        .trim()
-        .split(/ +/)
-        .filter((w) => w != '')
-    : null;
+  const keywordFilter = useMemo(
+    () =>
+      searchParams.has('search')
+        ? searchParams
+            .get('search')
+            .trim()
+            .split(/ +/)
+            .filter((w) => w != '')
+        : null,
+    [searchParams.get('search')]
+  );
   const [modalState, setModalState] = useState<{
     action: ServiceActionActions;
     resourceClaim?: ResourceClaim;
@@ -198,9 +202,8 @@ const ResourceClaims: React.FC<{}> = () => {
         );
         return await deleteResourceClaim(resourceClaim);
       } else {
-        const workshopProvisionName = resourceClaim.metadata?.labels?.[`${BABYLON_DOMAIN}/workshop-provision`];
-        const isPartOfWorkshop = !!workshopProvisionName;
-        if (isPartOfWorkshop) return resourceClaim; // If has a workshopProvision -> Do nothing.
+        const isPartOfWorkshop = isResourceClaimPartOfWorkshop(resourceClaim);
+        if (isPartOfWorkshop) return resourceClaim;
         if (modalState.action === 'start' && checkResourceClaimCanStart(resourceClaim)) {
           return await startAllResourcesInResourceClaim(resourceClaim);
         } else if (modalState.action === 'stop' && checkResourceClaimCanStop(resourceClaim)) {
@@ -312,7 +315,7 @@ const ResourceClaims: React.FC<{}> = () => {
             <ProjectSelector
               currentNamespaceName={namespace}
               onSelect={(n) => {
-                navigate(`/admin/resourceclaims/${n.name}?${urlSearchParams.toString()}`);
+                navigate(`/admin/resourceclaims/${n.name}?${searchParams.toString()}`);
               }}
             />
           </SplitItem>
@@ -322,11 +325,11 @@ const ResourceClaims: React.FC<{}> = () => {
               placeholder="Search..."
               onSearch={(value) => {
                 if (value) {
-                  urlSearchParams.set('search', value.join(' '));
-                } else if (urlSearchParams.has('search')) {
-                  urlSearchParams.delete('search');
+                  searchParams.set('search', value.join(' '));
+                } else if (searchParams.has('search')) {
+                  searchParams.delete('search');
                 }
-                navigate(`${location.pathname}?${urlSearchParams.toString()}`);
+                setSearchParams(searchParams);
               }}
             />
           </SplitItem>
@@ -377,8 +380,7 @@ const ResourceClaims: React.FC<{}> = () => {
               const resources = (resourceClaim.status?.resources || []).map((r) => r.state);
               const guid = resourceHandle?.name ? resourceHandle.name.replace(/^guid-/, '') : null;
               const workshopName = resourceClaim.metadata?.labels?.[`${BABYLON_DOMAIN}/workshop`];
-              const workshopProvisionName = resourceClaim.metadata?.labels?.[`${BABYLON_DOMAIN}/workshop-provision`];
-              const isPartOfWorkshop = !!workshopProvisionName;
+              const isPartOfWorkshop = isResourceClaimPartOfWorkshop(resourceClaim);
               const costTracker = getCostTracker(resourceClaim);
               // Available actions depends on kind of service
               const actionHandlers = {

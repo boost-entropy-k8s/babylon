@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useReducer } from 'react';
-import { Link, useNavigate, useLocation, useParams } from 'react-router-dom';
+import { Link, useNavigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import {
   EmptyState,
   EmptyStateIcon,
@@ -21,10 +21,10 @@ import LocalTimestamp from '@app/components/LocalTimestamp';
 import OpenshiftConsoleLink from '@app/components/OpenshiftConsoleLink';
 import SelectableTable from '@app/components/SelectableTable';
 import TimeInterval from '@app/components/TimeInterval';
-import AnarchyNamespaceSelect from './AnarchyNamespaceSelect';
 import AnarchyRunnerStateSelect from './AnarchyRunnerStateSelect';
 import Footer from '@app/components/Footer';
 import { compareK8sObjectsArr } from '@app/util';
+import ProjectSelector from '@app/components/ProjectSelector';
 
 import './admin.css';
 
@@ -51,15 +51,19 @@ const AnarchyRuns: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { namespace } = useParams();
-  const urlSearchParams = new URLSearchParams(location.search);
-  const keywordFilter = urlSearchParams.has('search')
-    ? urlSearchParams
-        .get('search')
-        .trim()
-        .split(/ +/)
-        .filter((w) => w != '')
-    : null;
-  const stateUrlParam = urlSearchParams.has('state') ? urlSearchParams.get('state') : null;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const keywordFilter = useMemo(
+    () =>
+      searchParams.has('search')
+        ? searchParams
+            .get('search')
+            .trim()
+            .split(/ +/)
+            .filter((w) => w != '')
+        : null,
+    [searchParams.get('search')]
+  );
+  const stateUrlParam = searchParams.has('state') ? searchParams.get('state') : null;
   const [selectedUids, reduceSelectedUids] = useReducer(selectedUidsReducer, []);
 
   const labelSelectors = [];
@@ -177,7 +181,7 @@ const AnarchyRuns: React.FC = () => {
   // Fetch all if keywordFilter is defined.
   if (keywordFilter && anarchyRunsPages.length > 0 && anarchyRunsPages[anarchyRunsPages.length - 1].metadata.continue) {
     if (!isLoadingMore) {
-      if (AnarchyRuns.length > 0) {
+      if (anarchyRuns.length > 0) {
         setTimeout(() => {
           setSize(size + 1);
         }, 5000);
@@ -201,11 +205,11 @@ const AnarchyRuns: React.FC = () => {
               initialValue={keywordFilter}
               onSearch={(value) => {
                 if (value) {
-                  urlSearchParams.set('search', value.join(' '));
-                } else if (urlSearchParams.has('search')) {
-                  urlSearchParams.delete('searchs');
+                  searchParams.set('search', value.join(' '));
+                } else if (searchParams.has('search')) {
+                  searchParams.delete('searchs');
                 }
-                navigate(`${location.pathname}?${urlSearchParams.toString()}`);
+                setSearchParams(searchParams);
               }}
             />
           </SplitItem>
@@ -214,17 +218,18 @@ const AnarchyRuns: React.FC = () => {
               runnerState={stateUrlParam}
               onSelect={(state) => {
                 if (state) {
-                  urlSearchParams.set('state', state);
-                } else if (urlSearchParams.has('state')) {
-                  urlSearchParams.delete('state');
+                  searchParams.set('state', state);
+                } else if (searchParams.has('state')) {
+                  searchParams.delete('state');
                 }
-                navigate(`${location.pathname}?${urlSearchParams.toString()}`);
+                setSearchParams(searchParams);
               }}
             />
           </SplitItem>
           <SplitItem>
-            <AnarchyNamespaceSelect
-              namespace={namespace}
+            <ProjectSelector
+              selector="anarchy"
+              currentNamespaceName={namespace}
               onSelect={(namespaceName) => {
                 if (namespaceName) {
                   navigate(`/admin/anarchyruns/${namespaceName}${location.search}`);
