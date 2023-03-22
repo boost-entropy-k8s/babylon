@@ -36,7 +36,14 @@ import { apiPaths, fetcherItemsInAllPages } from '@app/api';
 import { CatalogItem } from '@app/types';
 import useSession from '@app/utils/useSession';
 import SearchInputString from '@app/components/SearchInputString';
-import { checkAccessControl, displayName, BABYLON_DOMAIN, FETCH_BATCH_LIMIT, stripTags } from '@app/util';
+import {
+  checkAccessControl,
+  displayName,
+  BABYLON_DOMAIN,
+  FETCH_BATCH_LIMIT,
+  stripTags,
+  CATALOG_MANAGER_DOMAIN,
+} from '@app/util';
 import LoadingIcon from '@app/components/LoadingIcon';
 import Footer from '@app/components/Footer';
 import {
@@ -144,6 +151,17 @@ function filterCatalogItemByLabels(catalogItem: CatalogItem, labelFilter: { [att
           .replace(/-[0-9]+$/, '')
           .toLowerCase();
         if (matchAttr === ciAttr) {
+          if (matchValues.includes(ciValue.toLowerCase())) {
+            matched = true;
+          }
+        }
+      }
+      if (ciLabel.startsWith(`${CATALOG_MANAGER_DOMAIN}/`)) {
+        const ciAttr = ciLabel
+          .substring(CATALOG_MANAGER_DOMAIN.length + 1)
+          .replace(/-[0-9]+$/, '')
+          .toLowerCase();
+        if (matchAttr === ciAttr) {
           if (ciAttr === CUSTOM_LABELS.RATING.key) {
             if (parseInt(ciValue, 10) >= parseInt(matchValues[0], 10)) matched = true;
           } else if (matchValues.includes(ciValue.toLowerCase())) {
@@ -239,18 +257,12 @@ const Catalog: React.FC<{ userHasRequiredPropertiesToAccess: boolean }> = ({ use
           return aDisplayName < bDisplayName ? 1 : -1;
         } else {
           // sortBy === 'Featured' and 'Rating'
-          const aRating =
-            a.metadata.labels[
-              `${BABYLON_DOMAIN}/${
-                sortBy.selected === 'Featured' ? CUSTOM_LABELS.FEATURED_SCORE.key : CUSTOM_LABELS.RATING.key
-              }`
-            ];
-          const bRating =
-            b.metadata.labels[
-              `${BABYLON_DOMAIN}/${
-                sortBy.selected === 'Featured' ? CUSTOM_LABELS.FEATURED_SCORE.key : CUSTOM_LABELS.RATING.key
-              }`
-            ];
+          const selector =
+            sortBy.selected === 'Featured'
+              ? `${CUSTOM_LABELS.FEATURED_SCORE.domain}/${CUSTOM_LABELS.FEATURED_SCORE.key}`
+              : `${CUSTOM_LABELS.RATING.domain}/${CUSTOM_LABELS.RATING.key}`;
+          const aRating = a.metadata.labels[selector];
+          const bRating = b.metadata.labels[selector];
           if (aRating || bRating) {
             if (aRating && bRating) return parseInt(aRating, 10) < parseInt(bRating, 10) ? 1 : -1;
             if (bRating) return 1;
@@ -259,8 +271,9 @@ const Catalog: React.FC<{ userHasRequiredPropertiesToAccess: boolean }> = ({ use
           return aDisplayName < bDisplayName ? -1 : 1;
         }
       }
-      const aStage = a.metadata.labels?.[`${BABYLON_DOMAIN}/stage`];
-      const bStage = b.metadata.labels?.[`${BABYLON_DOMAIN}/stage`];
+      const stageSelector = `${CUSTOM_LABELS.STAGE.domain}/${CUSTOM_LABELS.STAGE.key}`;
+      const aStage = a.metadata.labels?.[stageSelector];
+      const bStage = b.metadata.labels?.[stageSelector];
       if (aStage !== bStage) {
         return aStage === 'prod' && bStage !== 'prod'
           ? -1
