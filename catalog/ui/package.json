@@ -33,7 +33,7 @@
     "@types/js-yaml": "^4.0.5",
     "@types/json2csv": "^5.0.3",
     "@types/lodash.throttle": "^4.1.7",
-    "@types/react": "^18.0.28",
+    "@types/react": "^18.0.32",
     "@types/react-dom": "^18.0.11",
     "@types/react-router-dom": "^5.3.3",
     "@types/react-window": "^1.8.5",
@@ -58,7 +58,7 @@
     "postcss": "^8.4.21",
     "postcss-custom-media": "^8.0.2",
     "postcss-loader": "^7.1.0",
-    "prettier": "^2.8.6",
+    "prettier": "^2.8.7",
     "prop-types": "^15.6.1",
     "raw-loader": "^4.0.2",
     "rimraf": "^4.4.1",
@@ -78,7 +78,7 @@
     "webpack-merge": "^5.8.0"
   },
   "dependencies": {
-    "@lexical/react": "^0.9.0",
+    "@lexical/react": "^0.9.1",
     "@monaco-editor/react": "^4.4.6",
     "@patternfly/react-core": "4.276.6",
     "@patternfly/react-icons": "4.93.6",
