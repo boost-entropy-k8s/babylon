@@ -37,8 +37,8 @@
     "@types/react-dom": "^18.0.11",
     "@types/react-router-dom": "^5.3.3",
     "@types/react-window": "^1.8.5",
-    "@typescript-eslint/eslint-plugin": "^5.56.0",
-    "@typescript-eslint/parser": "^5.56.0",
+    "@typescript-eslint/eslint-plugin": "^5.57.1",
+    "@typescript-eslint/parser": "^5.57.1",
     "babel-core": "^6.26.3",
     "babel-loader": "^9.1.2",
     "babel-plugin-transform-imports": "^2.0.0",
@@ -80,7 +80,7 @@
   "dependencies": {
     "@lexical/react": "^0.9.1",
     "@monaco-editor/react": "^4.4.6",
-    "@patternfly/react-core": "4.276.6",
+    "@patternfly/react-core": "4.276.8",
     "@patternfly/react-icons": "4.93.6",
     "@patternfly/react-styles": "4.92.6",
     "@patternfly/react-table": "4.112.39",
@@ -101,6 +101,6 @@
     "react-window": "^1.8.8",
     "redux": "^4.2.1",
     "reselect": "^4.1.7",
-    "swr": "^2.1.1"
+    "swr": "^2.1.2"
   }
 }
