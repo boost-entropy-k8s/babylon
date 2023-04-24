@@ -265,6 +265,8 @@ class AgnosticVRepo(CachedKopfObject):
         return stdout.split(), stderr
 
     async def agnosticv_get_component_paths_from_related_files(self, files):
+        if not files:
+            return [], ''
         args = ['--related', files[0]]
         for file in files[1:]:
             args.extend(['--or-related', file])
@@ -284,7 +286,8 @@ class AgnosticVRepo(CachedKopfObject):
     async def get_component_definition(self, source, logger):
         if self.git_checkout_ref != source.ref:
             await self.git_repo_checkout(logger=logger, source=source)
-        logger.info(source.hexsha)
+        source.hexsha = self.git_hexsha
+
         stdout, stderr = await self.agnosticv_exec(
             '--merge', os.path.join(self.agnosticv_path, source.path), '--output=json',
         )
