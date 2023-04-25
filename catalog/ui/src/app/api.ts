@@ -533,6 +533,13 @@ export async function createWorkshop({
         [`${BABYLON_DOMAIN}/catalogItemName`]: catalogItem.metadata.name,
         [`${BABYLON_DOMAIN}/catalogItemNamespace`]: catalogItem.metadata.namespace,
       },
+      annotations: {
+        ...(catalogItem.spec.multiuser && catalogItem.spec.messageTemplates?.user
+          ? { [`${DEMO_DOMAIN}/user-message-template`]: JSON.stringify(catalogItem.spec.messageTemplates?.user) }
+          : catalogItem.spec.messageTemplates?.info
+          ? { [`${DEMO_DOMAIN}/info-message-template`]: JSON.stringify(catalogItem.spec.messageTemplates?.info) }
+          : {}),
+      },
     },
     spec: {
       multiuserServices: catalogItem.spec.multiuser,
