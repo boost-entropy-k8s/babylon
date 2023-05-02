@@ -243,9 +243,9 @@ const WorkshopsItemComponent: React.FC<{
    */
   async function onWorkshopDeleteConfirm() {
     await deleteWorkshop(workshop);
-    mutateWorkshop(null);
-    mutateWorkshopProvisions(null);
-    mutate(null);
+    mutateWorkshop(undefined);
+    mutateWorkshopProvisions(undefined);
+    mutate(undefined);
     cache.delete(SERVICES_KEY({ namespace: workshop.metadata.namespace }));
     navigate(`/services/${serviceNamespaceName}`);
   }
@@ -431,7 +431,7 @@ const WorkshopsItemComponent: React.FC<{
   );
 };
 
-const WorkshopsItem: React.FC<{}> = ({}) => {
+const WorkshopsItem: React.FC<{}> = () => {
   const { name: workshopName, namespace: serviceNamespaceName, tab: activeTab = 'details' } = useParams();
   return (
     <ErrorBoundaryPage namespace={workshopName} name={serviceNamespaceName} type="Workshop">

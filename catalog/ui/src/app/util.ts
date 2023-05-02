@@ -246,7 +246,7 @@ export function getStageFromK8sObject(k8sObject: K8sObject): 'dev' | 'test' | 'e
   if (!k8sObject) return null;
   const nameSplitted = k8sObject.metadata.name.split('.');
   if (Array.isArray(nameSplitted) && nameSplitted.length > 0) {
-    const stage = nameSplitted[nameSplitted.length - 1];
+    const stage = nameSplitted[nameSplitted.length - 1].split('-')[0];
     const validStages = ['dev', 'test', 'event', 'prod'];
     if (validStages.includes(stage)) {
       return stage as 'dev' | 'test' | 'event' | 'prod';
@@ -311,8 +311,8 @@ export const compareK8sObjectsArr = (obj1?: K8sObject[], obj2?: K8sObject[]): bo
   if (obj1 !== obj2) {
     const map1 = new Map<string, string>();
     const map2 = new Map<string, string>();
-    if (obj1) obj1.map((i: K8sObject) => map1.set(i.metadata.uid, i.metadata.resourceVersion));
-    if (obj2) obj2.map((i: K8sObject) => map2.set(i.metadata.uid, i.metadata.resourceVersion));
+    if (obj1) obj1.forEach((i: K8sObject) => map1.set(i.metadata.uid, i.metadata.resourceVersion));
+    if (obj2) obj2.forEach((i: K8sObject) => map2.set(i.metadata.uid, i.metadata.resourceVersion));
     return areMapsEqual(map1, map2);
   }
   return true;
