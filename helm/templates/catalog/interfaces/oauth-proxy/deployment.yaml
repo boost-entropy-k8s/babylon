@@ -8,7 +8,7 @@ kind: Deployment
 metadata:
   labels:
     {{- include "babylon.labels" $ | nindent 4 }}
-    app.kubernetes.io/component: catalog-oauth-proxy
+    app.kubernetes.io/component: oauth-proxy
   name: babylon-catalog-oauth-proxy
   namespace: {{ $namespace }}
 spec:
@@ -16,14 +16,14 @@ spec:
   selector:
     matchLabels:
       {{- include "babylon.selectorLabels" $ | nindent 6 }}
-      app.kubernetes.io/component: catalog-oauth-proxy
+      app.kubernetes.io/component: oauth-proxy
   strategy:
     type: RollingUpdate
   template:
     metadata:
       labels:
         {{- include "babylon.selectorLabels" $ | nindent 8 }}
-        app.kubernetes.io/component: catalog-oauth-proxy
+        app.kubernetes.io/component: oauth-proxy
     spec:
       {{- with $oauthProxy.affinity }}
       affinity:
@@ -94,19 +94,15 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- if (or $interface.route.certManager.enable $oauthProxy.templates) }}
       volumes:
-      {{- if $interface.route.certManager.enable }}
       - name: proxy-tls
         secret:
           defaultMode: 0644
-          secretName: babylon-catalog-oauth-proxy-tls
-      {{- end }}
+          secretName: babylon-catalog-tls
       {{- if $oauthProxy.templates }}
       - name: templates
         configMap:
           defaultMode: 0644
           name: babylon-oauth-proxy-templates
-      {{- end }}
       {{- end }}
 {{- end }}
