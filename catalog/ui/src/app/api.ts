@@ -454,6 +454,10 @@ export async function createServiceRequest({
       requestResourceClaim.metadata.annotations[`${DEMO_DOMAIN}/purpose-activity`] =
         parameterValues.purpose_activity as string;
     }
+    if (parameterValues.purpose_explanation) {
+      requestResourceClaim.metadata.annotations[`${DEMO_DOMAIN}/purpose-explanation`] =
+        parameterValues.purpose_explanation as string;
+    }
     if (parameterValues.salesforce_id) {
       requestResourceClaim.metadata.annotations[`${DEMO_DOMAIN}/salesforce-id`] =
         parameterValues.salesforce_id as string;
@@ -1252,7 +1256,7 @@ export async function setLifespanEndForResourceClaim(
               : {}),
             ...(updatedRelativeMaxDate
               ? {
-                  relativeMaximum: `{% if resource_claim.annotations['demo.redhat.com/open-environment'] | default(false) | bool %}365d{% else %}${updatedRelativeMaxDate}d{% endif %}`,
+                  relativeMaximum: `{% if resource_claim.annotations['demo.redhat.com/open-environment'] | default(false) | bool %}365d{% else %}${updatedRelativeMaxDate}{% endif %}`,
                 }
               : {}),
           },
