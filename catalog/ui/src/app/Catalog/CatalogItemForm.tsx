@@ -51,7 +51,7 @@ import TermsOfService from '@app/components/TermsOfService';
 import { reduceFormState, checkEnableSubmit, checkConditionsInFormState } from './CatalogItemFormReducer';
 import AutoStopDestroy from '@app/components/AutoStopDestroy';
 import CatalogItemFormAutoStopDestroyModal, { TDates, TDatesTypes } from './CatalogItemFormAutoStopDestroyModal';
-import { formatCurrency, getEstimatedCost, getStage, isAutoStopDisabled } from './catalog-utils';
+import { formatCurrency, getEstimatedCost, isAutoStopDisabled } from './catalog-utils';
 import ErrorBoundaryPage from '@app/components/ErrorBoundaryPage';
 
 import './catalog-item-form.css';
@@ -66,7 +66,7 @@ const CatalogItemFormData: React.FC<{ catalogItemName: string; catalogNamespaceN
   const { isAdmin, groups, roles, serviceNamespaces, userNamespace } = useSession().getSession();
   const { data: catalogItem } = useSWRImmutable<CatalogItem>(
     apiPaths.CATALOG_ITEM({ namespace: catalogNamespaceName, name: catalogItemName }),
-    fetcher
+    fetcher,
   );
   const _displayName = displayName(catalogItem);
   const estimatedCost = useMemo(() => getEstimatedCost(catalogItem), []);
@@ -81,13 +81,9 @@ const CatalogItemFormData: React.FC<{ catalogItemName: string; catalogNamespaceN
       provisionConcurrency: catalogItem.spec.multiuser ? 1 : 10,
       provisionStartDelay: 30,
     }),
-    [catalogItem]
+    [catalogItem],
   );
   const workshopUiDisabled = catalogItem.spec.workshopUiDisabled || false;
-  const maxAutoDestroyTime = Math.min(
-    parseDuration(catalogItem.spec.lifespan?.maximum),
-    parseDuration(catalogItem.spec.lifespan?.relativeMaximum)
-  );
   const [formState, dispatchFormState] = useReducer(
     reduceFormState,
     reduceFormState(null, {
@@ -95,11 +91,20 @@ const CatalogItemFormData: React.FC<{ catalogItemName: string; catalogNamespaceN
       catalogItem,
       serviceNamespace: userNamespace,
       user: { groups, roles, isAdmin },
-    })
+    }),
   );
+  let maxAutoDestroyTime = Math.min(
+    parseDuration(catalogItem.spec.lifespan?.maximum),
+    parseDuration(catalogItem.spec.lifespan?.relativeMaximum),
+  );
+  let maxAutoStopTime = parseDuration(catalogItem.spec.runtime?.maximum);
+  if (formState.parameters['open_environment']?.value === true) {
+    maxAutoDestroyTime = parseDuration('365d');
+    maxAutoStopTime = maxAutoDestroyTime;
+  }
   const activityObj = ActivityOpts.find((a) => a.name === formState.activity);
   const purposeObj = PurposeOpts.find(
-    (p) => activityObj && formState.purpose && activityObj.id === p.activityId && formState.purpose.startsWith(p.name)
+    (p) => activityObj && formState.purpose && activityObj.id === p.activityId && formState.purpose.startsWith(p.name),
   );
   const submitRequestEnabled = checkEnableSubmit(formState);
 
@@ -114,7 +119,7 @@ const CatalogItemFormData: React.FC<{ catalogItemName: string; catalogNamespaceN
       scheduled,
     }: {
       scheduled: { startDate: Date; endDate: Date; stopDate: Date };
-    } = { scheduled: null }
+    } = { scheduled: null },
   ): Promise<void> {
     if (!submitRequestEnabled) {
       throw new Error('submitRequest called when submission should be disabled!');
@@ -186,7 +191,7 @@ const CatalogItemFormData: React.FC<{ catalogItemName: string; catalogNamespaceN
                 date: formState.startDate,
                 type: 'resource',
                 autoStop: new Date(
-                  scheduled.startDate.getTime() + parseDuration(catalogItem.spec.runtime?.default || '4h')
+                  scheduled.startDate.getTime() + parseDuration(catalogItem.spec.runtime?.default || '4h'),
                 ),
               },
             }
@@ -206,7 +211,7 @@ const CatalogItemFormData: React.FC<{ catalogItemName: string; catalogNamespaceN
         autoStartDate={formState.startDate}
         isAutoStopDisabled={isAutoStopDisabled(catalogItem)}
         maxStartTimestamp={!!formState.workshop || !catalogItem.spec.lifespan ? null : Date.now() + maxAutoDestroyTime}
-        maxRuntimeTimestamp={isAdmin ? maxAutoDestroyTime : parseDuration(catalogItem.spec.runtime?.maximum)}
+        maxRuntimeTimestamp={isAdmin ? maxAutoDestroyTime : maxAutoStopTime}
         defaultRuntimeTimestamp={
           new Date(Date.now() + parseDuration(catalogItem.spec.runtime?.default)) > formState.endDate
             ? parseDuration('4h')
@@ -361,7 +366,7 @@ const CatalogItemFormData: React.FC<{ catalogItemName: string; catalogNamespaceN
           // check if there is an invalid parameter in the form group
           const invalidParameter = formGroup.parameters.find(
             (parameter) =>
-              !parameter.isDisabled && (parameter.isValid === false || parameter.validationResult === false)
+              !parameter.isDisabled && (parameter.isValid === false || parameter.validationResult === false),
           );
           // status is error if found an invalid parameter
           // status is success if all form group parameters are validated.
