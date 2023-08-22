@@ -48,7 +48,7 @@ anarchy:
     sources: 
       babylon_anarchy_governor:
         src: https://github.com/rhpds/babylon_anarchy_governor.git
-        version: v0.19.2
+        version: v0.20.3
   api:
     group: anarchy.gpte.redhat.com
     version: v1
@@ -150,7 +150,7 @@ notifier:
   image:
     repository: quay.io/redhat-gpte/babylon-notifier
     pullPolicy: IfNotPresent
-    tag: v0.5.2
+    tag: v0.5.3
   namespace:
     create: true
     name: babylon-notifier
