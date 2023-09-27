@@ -1652,4 +1652,5 @@ export const apiPaths: { [key in ResourceType]: (args: any) => string } = {
     `/apis/anarchy.gpte.redhat.com/v1/namespaces/${namespace}/anarchygovernors/${anarchyGovernorName}`,
   INCIDENTS: ({ status }: { status?: string }) => `/api/admin/incidents${status ? '?status=' + status : ''}`,
   INCIDENT: ({ incidentId }: { incidentId: number }) => `/api/admin/incidents/${incidentId}`,
+  RATINGS_HISTORY: ({ ciName }: { ciName: string }) => `/api/ratings/${ciName}/history`,
 };

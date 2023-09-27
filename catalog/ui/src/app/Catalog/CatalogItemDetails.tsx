@@ -65,6 +65,7 @@ import CatalogItemIcon from './CatalogItemIcon';
 import CatalogItemHealthDisplay from './CatalogItemHealthDisplay';
 
 import './catalog-item-details.css';
+import { ExternalLinkAltIcon } from '@patternfly/react-icons';
 
 enum CatalogItemAccess {
   Allow,
@@ -97,12 +98,12 @@ const CatalogItemDetails: React.FC<{ catalogItem: CatalogItem; onClose: () => vo
           namespace: userNamespace.name,
           limit: FETCH_BATCH_LIMIT,
           continueId,
-        })
+        }),
       ),
     {
       refreshInterval: 8000,
       compare: compareK8sObjectsArr,
-    }
+    },
   );
 
   const services: ResourceClaim[] = useMemo(
@@ -110,7 +111,7 @@ const CatalogItemDetails: React.FC<{ catalogItem: CatalogItem; onClose: () => vo
       Array.isArray(userResourceClaims)
         ? [].concat(...userResourceClaims.filter((r) => !isResourceClaimPartOfWorkshop(r)))
         : [],
-    [userResourceClaims]
+    [userResourceClaims],
   );
 
   const descriptionHtml = useMemo(
@@ -122,7 +123,7 @@ const CatalogItemDetails: React.FC<{ catalogItem: CatalogItem; onClose: () => vo
         }}
       />
     ),
-    [description, descriptionFormat]
+    [description, descriptionFormat],
   );
 
   const isDisabled = getIsDisabled(catalogItem);
@@ -230,7 +231,7 @@ const CatalogItemDetails: React.FC<{ catalogItem: CatalogItem; onClose: () => vo
                 isDisabled={isAdmin ? false : isDisabled}
                 className="catalog-item-details__main-btn"
               >
-                Order
+                Order {catalogItem.spec.externalUrl ? <ExternalLinkAltIcon style={{width: '10px', paddingTop: '4px', marginLeft: '4px'}} /> : null}
               </Button>
               {isAdmin ? (
                 <Button
@@ -245,7 +246,7 @@ const CatalogItemDetails: React.FC<{ catalogItem: CatalogItem; onClose: () => vo
                 url={
                   new URL(
                     `/catalog?item=${catalogItem.metadata.namespace}/${catalogItem.metadata.name}`,
-                    window.location.origin
+                    window.location.origin,
                   )
                 }
                 name={catalogItemName}
@@ -274,7 +275,7 @@ const CatalogItemDetails: React.FC<{ catalogItem: CatalogItem; onClose: () => vo
           ) : catalogItemAccess === CatalogItemAccess.Deny ? (
             <>
               <Button key="button" isDisabled variant="primary" className="catalog-item-details__main-btn">
-                Order
+              Order {catalogItem.spec.externalUrl ? <ExternalLinkAltIcon style={{width: '10px', paddingTop: '4px', marginLeft: '4px'}} /> : null}
               </Button>
               <div key="reason" className="catalog-item-details__access-deny-reason">
                 {catalogItemAccessDenyReason}
