@@ -36,7 +36,7 @@
     "@types/react": "^18.2.23",
     "@types/react-dom": "^18.2.7",
     "@types/react-router-dom": "^5.3.3",
-    "@types/react-window": "^1.8.5",
+    "@types/react-window": "^1.8.6",
     "@typescript-eslint/eslint-plugin": "^6.7.3",
     "@typescript-eslint/parser": "^6.7.3",
     "babel-core": "^6.26.3",
@@ -61,7 +61,7 @@
     "prettier": "^3.0.3",
     "prop-types": "^15.6.1",
     "raw-loader": "^4.0.2",
-    "rimraf": "^5.0.1",
+    "rimraf": "^5.0.5",
     "sirv-cli": "^2.0.2",
     "style-loader": "^3.3.3",
     "svg-url-loader": "^8.0.0",
@@ -84,7 +84,7 @@
     "@patternfly/react-icons": "^4.93.7",
     "@patternfly/react-styles": "^4.92.8",
     "@patternfly/react-table": "4.113.5",
-    "@reduxjs/toolkit": "^1.9.5",
+    "@reduxjs/toolkit": "^1.9.6",
     "asciidoctor": "^3.0.2",
     "dompurify": "^3.0.5",
     "fuse.js": "^6.6.2",
@@ -101,6 +101,6 @@
     "react-window": "^1.8.9",
     "redux": "^4.2.1",
     "reselect": "^4.1.8",
-    "swr": "^2.2.2"
+    "swr": "^2.2.4"
   }
 }
