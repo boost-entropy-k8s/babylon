@@ -19,7 +19,8 @@ import ImpersonateUserModal from '@app/components/ImpersonateUserModal';
 import summitLogo from '@app/bgimages/Summit-Logo.svg';
 import useImpersonateUser from '@app/utils/useImpersonateUser';
 import useSession from '@app/utils/useSession';
-import { getHelpUrl } from '@app/util';
+import useHelpLink from '@app/utils/useHelpLink';
+import useInterfaceConfig from '@app/utils/useInterfaceConfig';
 
 import './header.css';
 
@@ -35,6 +36,8 @@ const Header: React.FC<{
   const [impersonateUserModalIsOpen, setImpersonateUserModalIsOpen] = useState(false);
   const { isAdmin, email, userInterface } = useSession().getSession();
   const navigate = useNavigate();
+  const helpLink = useHelpLink();
+  const { help_text, status_page_url } = useInterfaceConfig();
 
   function clearUserImpersonation() {
     clearImpersonation();
@@ -57,19 +60,17 @@ const Header: React.FC<{
   }
   const openSupportCase = (e: { preventDefault: () => void }) => {
     e.preventDefault();
-    const userEmail = userImpersonated ? userImpersonated : email;
-    const url = getHelpUrl(userEmail);
-    window.open(url, '_blank');
+    window.open(helpLink, '_blank');
     return null;
   };
 
   const UserHelpDropdownItems = [
     <ApplicationLauncherItem key="open-support" component="button" onClick={openSupportCase} isExternal>
-      Open Support Case
+      {help_text}
     </ApplicationLauncherItem>,
     <ApplicationLauncherItem
       key="status-page-link"
-      href="https://rhdp.statuspage.io/"
+      href={status_page_url}
       target="_blank"
       rel="noreferrer nofollow"
       isExternal
@@ -113,13 +114,13 @@ const Header: React.FC<{
     UserControlDropdownItems.push(
       <DropdownItem key="impersonate" onClick={() => setImpersonateUserModalIsOpen(true)}>
         Impersonate user
-      </DropdownItem>,
+      </DropdownItem>
     );
     if (userImpersonated) {
       UserControlDropdownItems.push(
         <DropdownItem key="clear-impersonation" onClick={clearUserImpersonation}>
           Clear user impersonation
-        </DropdownItem>,
+        </DropdownItem>
       );
     }
   }
@@ -133,7 +134,7 @@ const Header: React.FC<{
         onClick={() =>
           window.open(
             'https://docs.google.com/forms/d/e/1FAIpQLSfwGW7ql2lDfaLDpg4Bgj_puFEVsM0El6-Nz8fyH48RnGLDrA/viewform?usp=sf_link',
-            '_blank',
+            '_blank'
           )
         }
       >
