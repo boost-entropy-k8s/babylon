@@ -27,7 +27,7 @@
     "@babel/preset-react": "^7.23.3",
     "@babel/preset-typescript": "^7.23.3",
     "@testing-library/jest-dom": "^6.4.2",
-    "@testing-library/react": "^14.2.0",
+    "@testing-library/react": "^14.2.1",
     "@testing-library/user-event": "^14.5.2",
     "@types/dompurify": "^3.0.5",
     "@types/jest": "^29.5.12",
@@ -72,10 +72,10 @@
     "tslib": "^2.6.2",
     "typescript": "^5.3.3",
     "url-loader": "^4.1.1",
-    "webpack": "^5.90.1",
+    "webpack": "^5.90.3",
     "webpack-bundle-analyzer": "^4.10.1",
     "webpack-cli": "^5.1.4",
-    "webpack-dev-server": "^4.15.1",
+    "webpack-dev-server": "^5.0.2",
     "webpack-merge": "^5.10.0"
   },
   "dependencies": {
