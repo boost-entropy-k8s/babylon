@@ -23,7 +23,7 @@
     "clean": "rimraf dist"
   },
   "devDependencies": {
-    "@babel/preset-env": "^7.24.0",
+    "@babel/preset-env": "^7.24.3",
     "@babel/preset-react": "^7.24.1",
     "@babel/preset-typescript": "^7.24.1",
     "@testing-library/jest-dom": "^6.4.2",
@@ -35,7 +35,7 @@
     "@types/json2csv": "^5.0.3",
     "@types/lodash.throttle": "^4.1.9",
     "@types/react": "^18.2.65",
-    "@types/react-dom": "^18.2.22",
+    "@types/react-dom": "^18.2.23",
     "@types/react-router-dom": "^5.3.3",
     "@types/react-window": "^1.8.8",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
@@ -75,7 +75,7 @@
     "webpack": "^5.91.0",
     "webpack-bundle-analyzer": "^4.10.1",
     "webpack-cli": "^5.1.4",
-    "webpack-dev-server": "^5.0.3",
+    "webpack-dev-server": "^5.0.4",
     "webpack-merge": "^5.10.0"
   },
   "dependencies": {
