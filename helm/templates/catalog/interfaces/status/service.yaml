@@ -1,0 +1,21 @@
+{{- range $namespace, $interface := .Values.catalog.interfaces }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: babylon-catalog-status
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "babylon.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: status
+spec:
+  ports:
+  - name: proxy
+    port: 443
+    protocol: TCP
+    targetPort: 8443
+  selector:
+    {{- include "babylon.selectorLabels" $ | nindent 4 }}
+    app.kubernetes.io/component: status
+  type: ClusterIP
+{{- end }}
