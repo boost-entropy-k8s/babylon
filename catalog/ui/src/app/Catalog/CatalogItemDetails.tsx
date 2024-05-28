@@ -83,7 +83,16 @@ const CatalogItemDetails: React.FC<{ catalogItem: CatalogItem; onClose: () => vo
   const { description, descriptionFormat } = getDescription(catalogItem);
   const lastSuccessfulProvisionTime = getLastSuccessfulProvisionTime(catalogItem);
   const helpLink = useHelpLink();
-
+  const { data: metrics } = useSWRImmutable<AssetMetrics>(
+    catalogItem.metadata.labels?.['gpte.redhat.com/asset-uuid']
+      ? apiPaths.ASSET_METRICS({ asset_uuid: catalogItem.metadata.labels['gpte.redhat.com/asset-uuid'] })
+      : null,
+    fetcher,
+    {
+      shouldRetryOnError: false,
+      suspense: false,
+    }
+  );
   const { data: userResourceClaims } = useSWR<ResourceClaim[]>(
     userNamespace?.name
       ? apiPaths.RESOURCE_CLAIMS({
@@ -104,12 +113,7 @@ const CatalogItemDetails: React.FC<{ catalogItem: CatalogItem; onClose: () => vo
       compare: compareK8sObjectsArr,
     }
   );
-  const { data: metrics } = useSWRImmutable<AssetMetrics>(
-    catalogItem.metadata.labels?.['gpte.redhat.com/asset-uuid']
-      ? apiPaths.ASSET_METRICS({ asset_uuid: catalogItem.metadata.labels['gpte.redhat.com/asset-uuid'] })
-      : null,
-    fetcher
-  );
+
   const services: ResourceClaim[] = useMemo(
     () =>
       Array.isArray(userResourceClaims)
@@ -338,7 +342,7 @@ const CatalogItemDetails: React.FC<{ catalogItem: CatalogItem; onClose: () => vo
                 <DescriptionListGroup className="catalog-item-details__estimated-cost">
                   <DescriptionListTerm>Estimated hourly cost</DescriptionListTerm>
                   <DescriptionListDescription>
-                    {formatCurrency(metrics?.medianRuntimeCostByHour * 1.15)}
+                    {formatCurrency(metrics?.medianRuntimeCostByHour * 1.1)}
                     <Tooltip content="Estimated hourly cost per running instance. Chargeback to your cost center.">
                       <InfoAltIcon
                         style={{
@@ -356,7 +360,7 @@ const CatalogItemDetails: React.FC<{ catalogItem: CatalogItem; onClose: () => vo
                 <DescriptionListGroup className="catalog-item-details__estimated-time">
                   <DescriptionListTerm>Estimated provision time</DescriptionListTerm>
                   <DescriptionListDescription>
-                    {`Up to ${formatTime(`${metrics?.medianProvisionHour * 1.15}h`)}`}
+                    {`Up to ${formatTime(`${metrics?.medianProvisionHour * 60 * 1.1}m`)}`}
                   </DescriptionListDescription>
                 </DescriptionListGroup>
               ) : null}
