@@ -69,6 +69,7 @@ type CreateWorkshopPovisionOpt = {
   parameters: any;
   startDelay: number;
   workshop: Workshop;
+  useAutoDetach: boolean;
 };
 
 export type CreateServiceRequestParameterValues = {
@@ -285,8 +286,7 @@ export async function checkSalesforceId(
     return { valid: false, message: defaultMessage };
   }
   try {
-    return { valid: true, message: '' };
-    // await debouncedApiFetch(`/api/salesforce/${id}?${sales_type ? `sales_type=${sales_type}` : ''}`);
+    await debouncedApiFetch(`/api/salesforce/${id}?${sales_type ? `sales_type=${sales_type}` : ''}`);
   } catch (errorResponse: any) {
     try {
       const error = await errorResponse.json();
@@ -348,7 +348,7 @@ export async function createServiceRequest({
         [`${BABYLON_DOMAIN}/catalogDisplayName`]: catalogNamespaceName || catalogItem.metadata.namespace,
         [`${BABYLON_DOMAIN}/catalogItemDisplayName`]: displayName(catalogItem),
         [`${BABYLON_DOMAIN}/requester`]: session.user,
-        [`${BABYLON_DOMAIN}/category`]: catalogItem.metadata.labels?.[`${BABYLON_DOMAIN}/category`],
+        [`${BABYLON_DOMAIN}/category`]: catalogItem.spec.category,
         [`${BABYLON_DOMAIN}/url`]: `${baseUrl}/services/${serviceNamespace.name}/${catalogItem.metadata.name}`,
         ...(usePoolIfAvailable === false ? { ['poolboy.gpte.redhat.com/resource-pool-name']: 'disable' } : {}),
         ...(catalogItem.spec.userData
@@ -561,7 +561,7 @@ export async function createWorkshop({
           : {}),
       },
       annotations: {
-        [`${BABYLON_DOMAIN}/category`]: catalogItem.metadata.labels?.[`${BABYLON_DOMAIN}/category`],
+        [`${BABYLON_DOMAIN}/category`]: catalogItem.spec.category,
         ...(catalogItem.spec.multiuser && catalogItem.spec.messageTemplates?.user
           ? { [`${DEMO_DOMAIN}/user-message-template`]: JSON.stringify(catalogItem.spec.messageTemplates?.user) }
           : catalogItem.spec.messageTemplates?.info
@@ -699,6 +699,7 @@ export async function createWorkshopProvision({
   parameters,
   startDelay,
   workshop,
+  useAutoDetach,
 }: CreateWorkshopPovisionOpt) {
   const definition: WorkshopProvision = {
     apiVersion: `${BABYLON_DOMAIN}/v1`,
@@ -714,7 +715,7 @@ export async function createWorkshopProvision({
           : {}),
       },
       annotations: {
-        [`${BABYLON_DOMAIN}/category`]: catalogItem.metadata.labels?.[`${BABYLON_DOMAIN}/category`],
+        [`${BABYLON_DOMAIN}/category`]: catalogItem.spec.category,
       },
       ownerReferences: [
         {
@@ -736,6 +737,13 @@ export async function createWorkshopProvision({
       parameters: parameters,
       startDelay: startDelay,
       workshopName: workshop.metadata.name,
+      ...(useAutoDetach
+        ? {
+            autoDetach: {
+              when: `status.resources | json_query("[?state.spec.vars.current_state == 'provision-failed']") | length != 0`,
+            },
+          }
+        : {}),
     },
   };
 
