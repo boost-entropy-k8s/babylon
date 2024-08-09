@@ -524,6 +524,36 @@ async def create_support(request):
         url=f"{admin_api}/api/admin/v1/workshop/support",
     )
 
+@routes.get("/api/salesforce/accounts")
+async def list_sfdc_accounts(request):
+    headers = {
+        "Authorization": f"Bearer {reporting_api_authorization_token}"
+    }
+    queryString = ""
+    salesType = request.query.get("sales_type")
+    if salesType:
+        queryString = f"sales_type={salesType}"
+    return await api_proxy(
+        headers=headers,
+        method="GET",
+        url=f"{reporting_api}/search/accounts?{queryString}",
+    )
+@routes.get("/api/salesforce/accounts/{account_id}")
+async def list_sfdc_accounts(request):
+    account_id = request.match_info.get('salesforce_id')
+    headers = {
+        "Authorization": f"Bearer {reporting_api_authorization_token}"
+    }
+    queryString = f"account_id={account_id}"
+    salesType = request.query.get("sales_type")
+    if salesType:
+        queryString = f"{queryString}&sales_type={salesType}"
+    return await api_proxy(
+        headers=headers,
+        method="GET",
+        url=f"{reporting_api}/search/accounts/sfdc?{queryString}",
+    )
+    
 @routes.get("/api/salesforce/{salesforce_id}")
 async def salesforce_id_validation(request):
     salesforce_id = request.match_info.get('salesforce_id')
@@ -602,7 +632,7 @@ async def workshop_post(request):
         label_selector=f"babylon.gpte.redhat.com/workshop-id={workshop_id}"
     )
     if not workshop_list.get('items'):
-        raise web.HTTPNotFound()
+        raise web.HTTPConflict()
 
     workshop = workshop_list['items'][0]
     workshop_access_password = workshop['spec'].get('accessPassword')

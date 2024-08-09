@@ -48,7 +48,7 @@ anarchy:
     sources: 
       babylon_anarchy_governor:
         src: https://github.com/rhpds/babylon_anarchy_governor.git
-        version: v0.20.3
+        version: v0.24.0
   api:
     group: anarchy.gpte.redhat.com
     version: v1
@@ -122,11 +122,12 @@ catalog:
       certUtilsOperator:
         enable: false
       #host: <namespace>.<ingressDomain>
+      redirectToStatus: false
     ui:
       image:
         pullPolicy: IfNotPresent
         repository: quay.io/redhat-gpte/babylon-catalog-ui
-        tag: v0.32.4
+        tag: v0.32.5
       replicaCount: 1
       resources:
         requests:
@@ -162,7 +163,7 @@ notifier:
   image:
     repository: quay.io/rhpds/babylon-notifier
     pullPolicy: IfNotPresent
-    tag: v0.7.1
+    tag: v0.7.2
   namespace:
     create: true
     name: babylon-notifier
