@@ -23,7 +23,7 @@ agnosticv:
   operator:
     image:
       repository: quay.io/rhpds/babylon-agnosticv-operator
-      tag: v1.6.0
+      tag: v1.8.2
       pullPolicy: IfNotPresent
     resources:
       limits:
@@ -138,7 +138,7 @@ catalog:
           memory: "256Mi"
     status:
       image:
-        tag: v1.0.4
+        tag: v1.0.5
         repository: quay.io/redhat-gpte/babylon-catalog-status
         pullPolicy: IfNotPresent
       replicaCount: 1
