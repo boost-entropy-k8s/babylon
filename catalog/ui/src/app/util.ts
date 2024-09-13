@@ -15,6 +15,7 @@ import {
   Workshop,
 } from '@app/types';
 
+export const GPTE_DOMAIN = 'gpte.redhat.com';
 export const BABYLON_DOMAIN = 'babylon.gpte.redhat.com';
 export const DEMO_DOMAIN = 'demo.redhat.com';
 export const CATALOG_MANAGER_DOMAIN = `catalog-manager.${DEMO_DOMAIN}`;
@@ -211,9 +212,11 @@ export function checkResourceClaimCanRate(resourceClaim: ResourceClaim): boolean
       'new',
       'requesting',
       'initializing',
+      'starting',
       'stop-error',
       'provision-pending',
       'provisioning',
+      'requesting',
       'provision-canceled',
     ];
     const currentState = state?.spec?.vars?.current_state;

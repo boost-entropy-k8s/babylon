@@ -89,9 +89,12 @@ const ServiceStatus: React.FC<{
     let _state = summary.state.replace('-', ' ');
     switch (true) {
       case summary.state.endsWith('-pending'):
+      case summary.state.endsWith('-scheduled'):
       case summary.state === 'provisioning':
       case summary.state === 'requesting':
       case summary.state === 'initializing':
+      case summary.state === 'stopping':
+      case summary.state === 'starting':
         _phase = 'in-progress';
         break;
       case summary.state.endsWith('-failed'):
