@@ -31,8 +31,8 @@ import ListIcon from '@patternfly/react-icons/dist/js/icons/list-icon';
 import ThIcon from '@patternfly/react-icons/dist/js/icons/th-icon';
 import useSWRImmutable from 'swr/immutable';
 import { AsyncParser } from 'json2csv';
-import { apiPaths, fetcherItemsInAllPages } from '@app/api';
-import { CatalogItem } from '@app/types';
+import { apiPaths, fetcher, fetcherItemsInAllPages } from '@app/api';
+import { CatalogItem, CatalogItemIncidents } from '@app/types';
 import useSession from '@app/utils/useSession';
 import SearchInputString from '@app/components/SearchInputString';
 import {
@@ -53,6 +53,7 @@ import {
   HIDDEN_LABELS,
   CUSTOM_LABELS,
   setLastFilter,
+  getStatus,
 } from './catalog-utils';
 import CatalogCategorySelector from './CatalogCategorySelector';
 import CatalogInterfaceDescription from './CatalogInterfaceDescription';
@@ -331,6 +332,14 @@ const Catalog: React.FC<{ userHasRequiredPropertiesToAccess: boolean }> = ({ use
     [sortBy.selected]
   );
 
+  const { data: activeIncidents } = useSWRImmutable<CatalogItemIncidents>(
+    apiPaths.CATALOG_ITEMS_ACTIVE_INCIDENTS({ namespace: catalogNamespaceName ? catalogNamespaceName : null }),
+    fetcher,
+    {
+      suspense: false,
+      shouldRetryOnError: false,
+    }
+  );
   const { data: catalogItemsArr } = useSWRImmutable<CatalogItem[]>(
     apiPaths.CATALOG_ITEMS({ namespace: catalogNamespaceName ? catalogNamespaceName : 'all-catalogs' }),
     () => fetchCatalog(catalogNamespaceName ? [catalogNamespaceName] : catalogNamespaceNames)
@@ -347,6 +356,12 @@ const Catalog: React.FC<{ userHasRequiredPropertiesToAccess: boolean }> = ({ use
     catalogItemsCpy.forEach((c, i) => {
       if (c.spec.description) {
         catalogItemsCpy[i].spec.description.safe = stripTags(c.spec.description.content);
+      }
+      const incident =  activeIncidents ? activeIncidents.items.find(
+        (i) => i.asset_uuid === c.metadata.labels?.['gpte.redhat.com/asset-uuid']
+      ) : null;
+      if (incident) {
+        catalogItemsCpy[i].metadata.annotations[`${BABYLON_DOMAIN}/incident`] = JSON.stringify(incident);
       }
     });
     const options = {
@@ -403,13 +418,26 @@ const Catalog: React.FC<{ userHasRequiredPropertiesToAccess: boolean }> = ({ use
     return [catalogItemsFuse, catalogItemsCpy];
   }, [catalogItems, selectedCategory, selectedLabels, compareCatalogItems, selectedAdminFilter]);
 
-  const catalogItemsResult = useMemo(
-    () =>
-      searchString
-        ? _catalogItems.search("'" + searchString.split(' ').join(" '")).map((x) => x.item)
-        : _catalogItemsCpy,
-    [searchString, _catalogItems, _catalogItemsCpy]
-  );
+  const catalogItemsResult = useMemo(() => {
+    const items = searchString
+      ? _catalogItems.search("'" + searchString.split(' ').join(" '")).map((x) => x.item)
+      : _catalogItemsCpy;
+    const operationalItems = [];
+    const disabledItems = [];
+    for (let catalogItem of items) {
+      const status = getStatus(catalogItem);
+      if (status) {
+        const isDisabled = status.disabled;
+        const statusName = status.name;
+        if (statusName === 'Under maintenance' || isDisabled) {
+          disabledItems.push(catalogItem);
+        } else {
+          operationalItems.push(catalogItem);
+        }
+      }
+    }
+    return operationalItems.concat(disabledItems);
+  }, [searchString, _catalogItems, _catalogItemsCpy]);
 
   const openCatalogItem =
     openCatalogItemName && openCatalogItemNamespaceName

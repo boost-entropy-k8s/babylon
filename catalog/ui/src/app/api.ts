@@ -20,7 +20,6 @@ import {
   Nullable,
   ResourceType,
   WorkshopUserAssignment,
-  ParameterValues,
 } from '@app/types';
 import { store, selectImpersonationUser } from '@app/store';
 import {
@@ -56,7 +55,7 @@ type CreateServiceRequestOpt = {
   serviceNamespace: ServiceNamespace;
   groups: string[];
   isAdmin: boolean;
-  parameterValues?: ParameterValues;
+  parameterValues?: CreateServiceRequestParameterValues;
   usePoolIfAvailable: boolean;
   stopDate?: Date;
   endDate: Date;
@@ -75,6 +74,10 @@ type CreateWorkshopPovisionOpt = {
   workshop: Workshop;
   useAutoDetach: boolean;
   usePoolIfAvailable: boolean;
+};
+
+export type CreateServiceRequestParameterValues = {
+  [name: string]: boolean | number | string;
 };
 
 type K8sObjectListCommonOpt = {
@@ -1608,6 +1611,12 @@ export const apiPaths: { [key in ResourceType]: (args: any) => string } = {
     `/apis/${BABYLON_DOMAIN}/v1/namespaces/${namespace}/catalogitems?limit=${limit}${
       continueId ? `&continue=${continueId}` : ''
     }${labelSelector ? `&labelSelector=${labelSelector}` : ''}`,
+  CATALOG_ITEM_INCIDENTS: ({ namespace, asset_uuid }: { namespace: string; asset_uuid: string }) =>
+    `/api/catalog_incident/incidents/${asset_uuid}/${namespace.split('-').slice(-1)[0]}`,
+  CATALOG_ITEM_LAST_INCIDENT: ({ namespace, asset_uuid }: { namespace: string; asset_uuid: string }) =>
+    `/api/catalog_incident/last-incident/${asset_uuid}/${namespace.split('-').slice(-1)[0]}`,
+  CATALOG_ITEMS_ACTIVE_INCIDENTS: ({ namespace }: { namespace?: string }) =>
+    `/api/catalog_incident/active-incidents${namespace ? `?stage=${namespace.split('-').slice(-1)[0]}` : ''}`,
   RESOURCE_CLAIMS: ({
     namespace,
     limit,

@@ -112,6 +112,38 @@ export interface CatalogItem extends K8sObject {
   };
 }
 
+export type CatalogItemIncidentStatus =
+  | 'Degraded performance'
+  | 'Operational'
+  | 'Under maintenance'
+  | 'Partial outage'
+  | 'Major outage';
+
+export interface CatalogItemIncident {
+  created_by: string;
+  disabled: boolean;
+  status: CatalogItemIncidentStatus;
+  incident_url: string;
+  jira_url: string;
+  comments: string;
+  asset_uuid: string;
+  stage: string;
+  active: boolean;
+  created_at: string;
+  downtime_interval: string;
+  downtime_hours: number;
+  last_incident_at: string;
+  resolved_at: string;
+  uptime_interval: string;
+  uptime_hours: number;
+  updated_at: string;
+  id: number;
+}
+
+export interface CatalogItemIncidents {
+  items: CatalogItemIncident[];
+}
+
 export interface CatalogItemList {
   items: CatalogItem[];
   metadata: K8sObjectListMeta;
@@ -339,7 +371,7 @@ export interface ResourceHandleSpec {
   lifespan?: ResourceHandleSpecLifespan;
   resourceClaim?: K8sObjectReference;
   resourcePool?: K8sObjectReference;
-  resources?: ResourceHandleSpecResource[];
+  resources: ResourceHandleSpecResource[];
 }
 
 export interface ResourceHandleSpecLifespan {
@@ -358,7 +390,6 @@ export interface ResourceHandleSpecResource {
 
 export interface ResourcePool extends K8sObject {
   spec: ResourcePoolSpec;
-  status?: ResourcePoolStatus;
 }
 
 export interface ResourcePoolList {
@@ -369,21 +400,9 @@ export interface ResourcePoolList {
 export interface ResourcePoolSpec {
   lifespan?: ResourcePoolSpecLifespan;
   minAvailable: number;
-  provider: ResourcePoolProvider;
+  resources: ResourcePoolSpecResource[];
   deleteUnhealthyResourceHandles?: boolean;
   maxUnready?: number;
-}
-
-export interface ResourcePoolStatus {
-  resourceHandleCount: {
-    available: number;
-    ready: number;
-  };
-  resourceHandles: {
-    healthy: boolean;
-    name: string;
-    ready:boolean;
-  }[];
 }
 
 export interface ResourcePoolSpecLifespan {
@@ -391,11 +410,6 @@ export interface ResourcePoolSpecLifespan {
   maximum: string;
   relativeMaximum: string;
   unclaimed: string;
-}
-
-export interface ResourcePoolProvider {
-  name: string;
-  parameterValues: ParameterValues;
 }
 
 export interface ResourcePoolSpecResource {
@@ -542,25 +556,23 @@ export interface WorkshopUserAssignmentList {
 }
 
 export interface WorkshopUserAssignment extends K8sObject {
-  spec: WorkshopSpecUserAssignment;
+  spec: {
+    data?: any;
+    messages?: string;
+    resourceClaimName?: string;
+    userName?: string;
+    workshopName: string;
+    labUserInterface?: {
+      data?: object;
+      method?: string;
+      url: string;
+      redirect?: boolean;
+    };
+    assignment?: {
+      email: string;
+    };
+  };
   status?: any;
-}
-
-export interface WorkshopSpecUserAssignment {
-  data?: any;
-  messages?: string;
-  resourceClaimName?: string;
-  userName?: string;
-  workshopName: string;
-  labUserInterface?: {
-    data?: object;
-    method?: string;
-    url: string;
-    redirect?: boolean;
-  };
-  assignment?: {
-    email: string;
-  };
 }
 
 export type Session = {
@@ -598,6 +610,9 @@ export type ResourceType =
   | 'CATALOG_ITEM'
   | 'ASSET_METRICS'
   | 'CATALOG_ITEMS'
+  | 'CATALOG_ITEM_INCIDENTS'
+  | 'CATALOG_ITEM_LAST_INCIDENT'
+  | 'CATALOG_ITEMS_ACTIVE_INCIDENTS'
   | 'RESOURCE_CLAIMS'
   | 'RESOURCE_CLAIM'
   | 'NAMESPACES'
@@ -701,7 +716,3 @@ export type SalesforceAccount = {
 };
 
 export type SfdcType = 'campaign' | 'cdh' | 'project' | 'opportunity';
-
-export type ParameterValues = {
-  [name: string]: boolean | number | string;
-};
