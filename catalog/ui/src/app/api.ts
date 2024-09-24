@@ -1313,7 +1313,7 @@ export async function setLifespanEndForResourceClaim(
   let updatedRelativeMaxDate: string = null;
   if (resourceClaim.status?.lifespan?.maximum) {
     const maxDate = new Date(resourceClaim.metadata.creationTimestamp);
-    maxDate.setDate(maxDate.getDate() + parseInt(resourceClaim.status.lifespan.maximum.slice(0, -1), 10));
+    maxDate.setTime(maxDate.getTime() + parseDuration(resourceClaim.status.lifespan.maximum));
     if (date.getTime() > maxDate.getTime()) {
       updatedMaxDate =
         Math.ceil(
@@ -1325,7 +1325,7 @@ export async function setLifespanEndForResourceClaim(
   }
   if (resourceClaim.status?.lifespan?.relativeMaximum) {
     const maxDate = new Date();
-    maxDate.setDate(maxDate.getDate() + parseInt(resourceClaim.status.lifespan.relativeMaximum.slice(0, -1), 10));
+    maxDate.setTime(maxDate.getTime() + parseDuration(resourceClaim.status.lifespan.relativeMaximum));
     if (date.getTime() > maxDate.getTime()) {
       updatedRelativeMaxDate = Math.ceil((date.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) + 1 + 'd';
     }
@@ -1611,12 +1611,12 @@ export const apiPaths: { [key in ResourceType]: (args: any) => string } = {
     `/apis/${BABYLON_DOMAIN}/v1/namespaces/${namespace}/catalogitems?limit=${limit}${
       continueId ? `&continue=${continueId}` : ''
     }${labelSelector ? `&labelSelector=${labelSelector}` : ''}`,
-  CATALOG_ITEM_INCIDENTS: ({ namespace, asset_uuid }: { namespace: string; asset_uuid: string }) =>
-    `/api/catalog_incident/incidents/${asset_uuid}/${namespace.split('-').slice(-1)[0]}`,
-  CATALOG_ITEM_LAST_INCIDENT: ({ namespace, asset_uuid }: { namespace: string; asset_uuid: string }) =>
-    `/api/catalog_incident/last-incident/${asset_uuid}/${namespace.split('-').slice(-1)[0]}`,
-  CATALOG_ITEMS_ACTIVE_INCIDENTS: ({ namespace }: { namespace?: string }) =>
-    `/api/catalog_incident/active-incidents${namespace ? `?stage=${namespace.split('-').slice(-1)[0]}` : ''}`,
+  CATALOG_ITEM_INCIDENTS: ({ stage, asset_uuid }: { stage: string; asset_uuid: string }) =>
+    `/api/catalog_incident/incidents/${asset_uuid}/${stage}`,
+  CATALOG_ITEM_LAST_INCIDENT: ({ stage, asset_uuid }: { stage: string; asset_uuid: string }) =>
+    `/api/catalog_incident/last-incident/${asset_uuid}/${stage}`,
+  CATALOG_ITEMS_ACTIVE_INCIDENTS: ({ stage }: { stage?: string }) =>
+    `/api/catalog_incident/active-incidents${stage ? `?stage=${stage}` : ''}`,
   RESOURCE_CLAIMS: ({
     namespace,
     limit,

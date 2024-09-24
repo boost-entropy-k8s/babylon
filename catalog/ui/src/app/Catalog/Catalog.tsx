@@ -43,6 +43,7 @@ import {
   stripTags,
   CATALOG_MANAGER_DOMAIN,
   GPTE_DOMAIN,
+  getStageFromK8sObject,
 } from '@app/util';
 import LoadingIcon from '@app/components/LoadingIcon';
 import Footer from '@app/components/Footer';
@@ -62,7 +63,6 @@ import CatalogLabelSelector from './CatalogLabelSelector';
 import CatalogNamespaceSelect from './CatalogNamespaceSelect';
 import CatalogContent from './CatalogContent';
 import IncidentsBanner from '@app/components/IncidentsBanner';
-import AdminSelector from './AdminSelector';
 import useInterfaceConfig from '@app/utils/useInterfaceConfig';
 
 import './catalog.css';
@@ -211,7 +211,7 @@ function saveFilter(urlParmsString: string, catalogNamespaceName: string) {
   setLastFilter(urlParams.toString());
 }
 
-async function fetchCatalog(namespaces: string[]): Promise<CatalogItem[]> {
+export async function fetchCatalog(namespaces: string[]): Promise<CatalogItem[]> {
   async function fetchNamespace(namespace: string): Promise<CatalogItem[]> {
     return await fetcherItemsInAllPages((continueId) =>
       apiPaths.CATALOG_ITEMS({ namespace, limit: FETCH_BATCH_LIMIT, continueId })
@@ -333,7 +333,7 @@ const Catalog: React.FC<{ userHasRequiredPropertiesToAccess: boolean }> = ({ use
   );
 
   const { data: activeIncidents } = useSWRImmutable<CatalogItemIncidents>(
-    apiPaths.CATALOG_ITEMS_ACTIVE_INCIDENTS({ namespace: catalogNamespaceName ? catalogNamespaceName : null }),
+    apiPaths.CATALOG_ITEMS_ACTIVE_INCIDENTS({ stage: catalogNamespaceName ? catalogNamespaceName : null }),
     fetcher,
     {
       suspense: false,
@@ -357,9 +357,12 @@ const Catalog: React.FC<{ userHasRequiredPropertiesToAccess: boolean }> = ({ use
       if (c.spec.description) {
         catalogItemsCpy[i].spec.description.safe = stripTags(c.spec.description.content);
       }
-      const incident =  activeIncidents ? activeIncidents.items.find(
-        (i) => i.asset_uuid === c.metadata.labels?.['gpte.redhat.com/asset-uuid']
-      ) : null;
+      const incident = activeIncidents
+        ? activeIncidents.items.find(
+            (i) =>
+              i.asset_uuid === c.metadata.labels?.['gpte.redhat.com/asset-uuid'] && i.stage === getStageFromK8sObject(c)
+          )
+        : null;
       if (incident) {
         catalogItemsCpy[i].metadata.annotations[`${BABYLON_DOMAIN}/incident`] = JSON.stringify(incident);
       }
@@ -416,7 +419,7 @@ const Catalog: React.FC<{ userHasRequiredPropertiesToAccess: boolean }> = ({ use
       catalogItemsFuse.remove((ci) => !filterCatalogItemByAdminFilter(ci, selectedAdminFilter));
     }
     return [catalogItemsFuse, catalogItemsCpy];
-  }, [catalogItems, selectedCategory, selectedLabels, compareCatalogItems, selectedAdminFilter]);
+  }, [catalogItems, selectedCategory, selectedLabels, compareCatalogItems, selectedAdminFilter, activeIncidents]);
 
   const catalogItemsResult = useMemo(() => {
     const items = searchString
@@ -554,7 +557,6 @@ const Catalog: React.FC<{ userHasRequiredPropertiesToAccess: boolean }> = ({ use
                         onSelect={onSelectLabels}
                         selected={selectedLabels}
                       />
-                      {isAdmin ? <AdminSelector onSelect={onSelectAdminFilter} selected={selectedAdminFilter} /> : null}
                     </SidebarPanel>
                     <SidebarContent>
                       <PageSection variant={PageSectionVariants.light} className="catalog__header">

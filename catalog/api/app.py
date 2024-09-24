@@ -453,8 +453,8 @@ async def provision_rating_post(request):
     )
 
 @routes.get("/api/ratings/catalogitem/{asset_uuid}/history")
-async def provision_rating_get(request):
-    asset_uid = asset.match_info.get('asset_uid')
+async def provision_rating_get_history(request):
+    asset_uuid = request.match_info.get('asset_uuid')
     user = await get_proxy_user(request)
     session = await get_user_session(request, user)
     if not session.get('admin'):
@@ -612,7 +612,7 @@ async def catalog_item_last_incident(request):
     return await api_proxy(
         headers=headers,
         method="GET",
-        url=f"{reporting_api}/catalog_incident/last-incidents/{asset_uuid}/{stage}",
+        url=f"{reporting_api}/catalog_incident/last-incident/{asset_uuid}/{stage}",
     )
 
 @routes.post("/api/catalog_incident/incidents/{asset_uuid}/{stage}")
