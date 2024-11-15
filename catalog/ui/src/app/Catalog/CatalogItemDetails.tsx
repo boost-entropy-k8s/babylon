@@ -66,6 +66,7 @@ import useHelpLink from '@app/utils/useHelpLink';
 import useSWRImmutable from 'swr/immutable';
 
 import './catalog-item-details.css';
+import UptimeDisplay from '@app/components/UptimeDisplay';
 
 enum CatalogItemAccess {
   Allow,
@@ -351,18 +352,20 @@ const CatalogItemDetails: React.FC<{ catalogItem: CatalogItem; onClose: () => vo
 
               {metrics?.medianRuntimeCostByHour ? (
                 <DescriptionListGroup className="catalog-item-details__estimated-cost">
-                  <DescriptionListTerm>Estimated Hourly Cost</DescriptionListTerm>
-                  <DescriptionListDescription>
-                    {formatCurrency(metrics?.medianRuntimeCostByHour * 1.1)}
+                  <DescriptionListTerm>
+                    Estimated Hourly Cost
                     <Tooltip content="Estimated hourly cost if not stopped.">
                       <InfoAltIcon
                         style={{
                           paddingTop: 'var(--pf-v5-global--spacer--xs)',
-                          marginLeft: 'var(--pf-v5-global--spacer--sm)',
+                          marginLeft: 'var(--pf-v5-global--spacer--xs)',
                           width: 'var(--pf-v5-global--icon--FontSize--sm)',
                         }}
                       />
                     </Tooltip>
+                  </DescriptionListTerm>
+                  <DescriptionListDescription>
+                    {formatCurrency(metrics?.medianRuntimeCostByHour * 1.1)}
                   </DescriptionListDescription>
                 </DescriptionListGroup>
               ) : null}
@@ -377,13 +380,22 @@ const CatalogItemDetails: React.FC<{ catalogItem: CatalogItem; onClose: () => vo
               ) : null}
 
               <DescriptionListGroup className="catalog-item-details__uptime">
-                <DescriptionListTerm>Uptime</DescriptionListTerm>
+                <DescriptionListTerm>
+                  Uptime
+                  <Tooltip content="Uptime during the last 90 days.">
+                    <InfoAltIcon
+                      style={{
+                        paddingTop: 'var(--pf-v5-global--spacer--xs)',
+                        marginLeft: 'var(--pf-v5-global--spacer--xs)',
+                        width: 'var(--pf-v5-global--icon--FontSize--sm)',
+                      }}
+                    />
+                  </Tooltip>
+                </DescriptionListTerm>
                 <DescriptionListDescription>
-                  {`${
-                    catalogItemIncident
-                      ? calculateUptimePercentage(catalogItemIncident.created_at, catalogItemIncident.downtime_hours)
-                      : 100
-                  }%`}
+                  <UptimeDisplay
+                    uptime={catalogItemIncident ? calculateUptimePercentage(catalogItemIncident.downtime_hours) : 100}
+                  />
                 </DescriptionListDescription>
               </DescriptionListGroup>
 
