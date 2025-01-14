@@ -57,19 +57,18 @@ async def bookmarks_post(bookmark_obj: BookmarkRequestSchema) -> BookmarkListRes
         logger.error(f"Error saving favorite: {e}", stack_info=True)
         raise HTTPException(status_code=500, detail="Error saving favorites") from e
 
-@router.delete("/api/user-manager/v1/bookmarks",
+@router.delete("/api/user-manager/v1/bookmarks/{email}/{asset_uuid}",
              response_model=BookmarkListResponseSchema,
              summary="Delete bookmark",
              )
-async def bookmarks_delete(bookmark_obj: BookmarkRequestSchema) -> BookmarkListResponseSchema:
-
-    logger.info(f"Delete favorite item for user {bookmark_obj.email}")
+async def bookmarks_delete(email: str, asset_uuid: str) -> BookmarkListResponseSchema:
+    logger.info(f"Delete favorite item {asset_uuid} for user {email}")
     try:
-        user = await User.get_by_email(bookmark_obj.email)
+        user = await User.get_by_email(email)
         if user:
-            bookmark = Bookmark.from_dict({"user_id": user.id, "asset_uuid": bookmark_obj.asset_uuid})
+            bookmark = Bookmark.from_dict({"user_id": user.id, "asset_uuid": asset_uuid})
             await bookmark.delete()
-            user = await User.get_by_email(bookmark_obj.email)
+            user = await User.get_by_email(email)
             bookmarks_response = [
                 BookmarkSchema.from_orm(bookmark).dict(exclude={"user_id"}) for bookmark in user.bookmarks
             ]
