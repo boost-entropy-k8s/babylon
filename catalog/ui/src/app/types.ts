@@ -160,8 +160,17 @@ export type MessageTemplate = {
   template: string;
   templateFormat: 'asciidoc' | 'html';
 };
+
+export interface AgnosticVRepo {
+  git: {
+    ref: string;
+    url: string;
+  };
+  name: string;
+}
 export interface CatalogItemSpec {
   accessControl?: AccessControl;
+  agnosticvRepo?: AgnosticVRepo;
   bookbag?: any;
   messageTemplates?: {
     user?: MessageTemplate;
@@ -182,6 +191,7 @@ export interface CatalogItemSpec {
   lifespan?: CatalogItemSpecLifespan;
   lastUpdate?: CatalogItemSpecLastUpdate;
   runtime?: CatalogItemSpecRuntime;
+  workshopLabUiRedirect?: boolean;
   externalUrl?: string;
   category?: string;
   description?: {
